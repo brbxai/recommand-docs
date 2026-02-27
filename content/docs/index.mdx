@@ -1,0 +1,378 @@
+---
+title: Getting Started
+description: Set up and start using the Recommand Peppol API for e-invoicing. Covers authentication, sending invoices, receiving documents, verifying recipients, and webhook configuration.
+---
+
+Welcome to Recommand's Peppol API documentation. This guide will help you set up and start using our API for Peppol document exchange.
+
+## Overview
+
+Recommand's Peppol API provides a simple and effective way to integrate Peppol document exchange into your existing systems. The API supports document creation, sending, receiving, and management through simple REST endpoints.
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- A Recommand account (sign up at [app.recommand.eu/signup](https://app.recommand.eu/signup))
+- Your API key and secret, available from [your dashboard](https://app.recommand.eu/api-keys)
+- A development environment capable of making HTTP requests
+
+## Playground Environment
+
+The Playground is a safe, isolated test environment. Playground teams look and behave like production teams, but they do not send documents over the real Peppol network. You can create as many playground teams as you like.
+
+Key characteristics:
+
+- No real Peppol delivery: sending is simulated
+- Data isolation: documents and companies stay within the playground team
+- No billing/subscription checks and no SMP registrations
+- Webhooks work the same, triggered by simulated inbound delivery
+
+Optionally, you can connect a playground to the **Peppol Test Network** for end-to-end testing with real Peppol participants. Test Network playgrounds use dedicated AP/SMP endpoints and register companies against the test infrastructure, while remaining fully separated from production.
+
+<div className='fd-steps [&_h3]:fd-step'>
+
+### Create a playground team
+
+- Dashboard: create a new team and choose Playground
+- API:
+
+<Tabs items={['cURL', 'Node.js']} groupId="language" persist>
+  <Tab value="cURL">
+
+```bash
+curl -X POST https://app.recommand.eu/api/v1/playgrounds \
+  -u key_xxx:secret_xxx \
+  -H "Content-Type: application/json" \
+  -d '{"name":"My Playground"}'
+```
+
+  </Tab>
+  <Tab value="Node.js">
+
+```javascript
+const res = await fetch("https://app.recommand.eu/api/v1/playgrounds", {
+  method: "POST",
+  headers: {
+    Authorization:
+      "Basic " + Buffer.from("key_xxx:secret_xxx").toString("base64"),
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({ name: "My Playground" }),
+});
+const body = await res.json();
+// body.success === true, body.playground.isPlayground === true
+```
+
+  </Tab>
+</Tabs>
+
+### Using a playground
+
+- Use the same endpoints as production; just ensure your `{teamId}`/`{companyId}` belong to the playground team
+- Sending documents simulates delivery; a document is only “received” if the recipient company exists in the same playground team
+- Configure webhooks on the playground team to receive simulated inbound events (e.g. `document.received`)
+
+### Check if a team is a playground
+
+<Tabs items={['cURL', 'Node.js']} groupId="language" persist>
+  <Tab value="cURL">
+
+```bash
+curl -X GET https://app.recommand.eu/api/v1/playgrounds/current \
+  -u key_xxx:secret_xxx
+```
+
+  </Tab>
+  <Tab value="Node.js">
+
+```javascript
+const res = await fetch("https://app.recommand.eu/api/v1/playgrounds/current", {
+  headers: {
+    Authorization:
+      "Basic " + Buffer.from("key_xxx:secret_xxx").toString("base64"),
+  },
+});
+if (res.status === 404) {
+  // Not a playground team
+} else {
+  const { playground } = await res.json();
+  console.log("isPlayground:", playground.isPlayground);
+}
+```
+
+  </Tab>
+</Tabs>
+
+</div>
+
+## Authentication
+
+All API requests must be authenticated using Basic Authentication, JWT bearer authentication, or OAuth2. More information on the authentication methods can be found in the [authentication guide](/docs/authentication).
+
+Below is an example of how to use Basic Authentication:
+
+```bash
+# Your API key as username, API secret as password
+curl -X GET https://app.recommand.eu/api/v1/companies \
+  -u key_xxx:secret_xxx
+```
+
+```javascript
+// Node.js example
+const response = await fetch("https://app.recommand.eu/api/v1/companies", {
+  headers: {
+    Authorization:
+      "Basic " + Buffer.from("key_xxx:secret_xxx").toString("base64"),
+  },
+});
+```
+
+## Core Concepts
+
+### Companies
+
+Companies represent businesses that can send or receive Peppol documents. Each company must be registered before sending documents using the [companies endpoint](/reference/companies):
+
+```javascript
+const response = await fetch("https://app.recommand.eu/api/v1/companies", {
+  method: "POST",
+  headers: {
+    Authorization:
+      "Basic " + Buffer.from("key_xxx:secret_xxx").toString("base64"),
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "ACME Corporation",
+    address: "123 Main Street",
+    postalCode: "1000",
+    city: "Brussels",
+    country: "BE",
+    enterpriseNumber: "0123456789",
+    vatNumber: "BE0123456789",
+  }),
+});
+```
+
+### Sending Invoices
+
+The primary function is sending Peppol-compliant invoices using the [send document endpoint](/reference/sending/send-document).
+
+A few things to note:
+
+- Remember to replace `{companyId}` with the correct company ID of the sender
+- Use your own API credentials, as explained above
+- The `recipient` field is the Peppol address of the recipient. In the example below, it's `0208:987654321`, where `0208` is the Belgian [Peppol Electronic Address Scheme](https://docs.peppol.eu/poacc/billing/3.0/codelist/eas/) and `987654321` is the recipient's enterprise number.
+- If you want to send a test invoice, you can simply register a new company and use it as both the sender and recipient.
+
+```javascript
+const response = await fetch(
+  "https://app.recommand.eu/api/v1/{companyId}/send",
+  {
+    method: "POST",
+    headers: {
+      Authorization:
+        "Basic " + Buffer.from("key_xxx:secret_xxx").toString("base64"),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      recipient: "0208:987654321", // Peppol address of recipient
+      documentType: "invoice",
+      document: {
+        invoiceNumber: "INV-2025-001",
+        issueDate: "2024-05-15",
+        dueDate: "2024-06-15",
+        buyer: {
+          vatNumber: "BE0987654321",
+          name: "Customer Company",
+          street: "Customer Street 1",
+          city: "Antwerp",
+          postalZone: "2000",
+          country: "BE",
+        },
+        paymentMeans: [
+          {
+            iban: "BE1234567890",
+          },
+        ],
+        lines: [
+          {
+            name: "Consulting Services",
+            netPriceAmount: "100.00",
+            vat: {
+              percentage: "21.00",
+            },
+          },
+        ],
+      },
+    }),
+  }
+);
+```
+
+You can also easily test the API with our [interactive API docs](/reference).
+
+### Verifying Recipients
+
+Before sending documents, you can verify if the recipient is registered in the Peppol network using the [verify endpoint](/reference/recipients/verify-recipient).
+This will be done automatically as well when you send a document.
+
+```javascript
+const response = await fetch("https://app.recommand.eu/api/v1/verify", {
+  method: "POST",
+  headers: {
+    Authorization:
+      "Basic " + Buffer.from("key_xxx:secret_xxx").toString("base64"),
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    peppolAddress: "0208:987654321",
+  }),
+});
+
+console.log(await response.json());
+```
+
+For valid recipients, you should get a response like this:
+
+```json
+{
+  "success": true,
+  "isValid": true,
+  "smpUrl": "http://B-c6451d3d5bd755bb0c2576c41fea37fb.iso6523-actorid-upis.edelivery.tech.ec.europa.eu/iso6523-actorid-upis::0208%3A1012081766"
+}
+```
+
+### Receiving Documents
+
+When a business partner sends you a document through Peppol, Recommand automatically receives, validates, and stores it. You can consume incoming documents using webhooks (real-time push) or by polling the inbox:
+
+```javascript
+// Poll the inbox for unread documents
+const response = await fetch("https://app.recommand.eu/api/v1/inbox", {
+  headers: {
+    Authorization:
+      "Basic " + Buffer.from("key_xxx:secret_xxx").toString("base64"),
+  },
+});
+```
+
+After processing a document in your system, mark it as read using the [mark as read endpoint](/reference/documents/mark-as-read) so it no longer appears in the inbox.
+
+For the full guide on webhooks, polling, fetching document details, and processing incoming documents, see the [Receiving Documents](/docs/receiving-documents) guide.
+
+## Error Handling
+
+The API returns structured error responses:
+
+```json
+{
+  "success": false,
+  "errors": {
+    "invoiceNumber": ["Invoice number is required"],
+    "buyer.vatNumber": ["Invalid VAT number format"]
+  }
+}
+```
+
+Before processing results, always check the HTTP status code or the `success` property.
+
+## Complete Invoice Example
+
+Here's a complete invoice example with all supported fields. You can view it in more detail in our [interactive API docs](/reference/sending/send-document).
+
+```javascript
+const invoice = {
+  invoiceNumber: "INV-2025-001",
+  issueDate: "2024-05-15",
+  dueDate: "2024-06-15",
+  note: "Thank you for your business",
+  buyerReference: "PO-2024-001",
+
+  seller: {
+    vatNumber: "BE0123456789",
+    name: "Your Company",
+    street: "Your Street 1",
+    city: "Brussels",
+    postalZone: "1000",
+    country: "BE",
+  },
+
+  buyer: {
+    vatNumber: "BE0987654321",
+    name: "Customer Company",
+    street: "Customer Street 1",
+    city: "Antwerp",
+    postalZone: "2000",
+    country: "BE",
+  },
+
+  paymentMeans: [
+    {
+      paymentMethod: "credit_transfer",
+      reference: "INV-2025-001",
+      iban: "BE1234567890",
+    },
+  ],
+
+  paymentTerms: {
+    note: "Net 30",
+  },
+
+  lines: [
+    {
+      name: "Consulting Services",
+      description: "Professional consulting services",
+      sellersId: "CS-001",
+      quantity: "10.00",
+      unitCode: "HUR", // Hours
+      netPriceAmount: "100.00",
+      netAmount: "1000.00",
+      vat: {
+        category: "S",
+        percentage: "21.00",
+      },
+    },
+  ],
+
+  attachments: [
+    {
+      id: "ATT-001",
+      documentType: "130",
+      mimeCode: "application/pdf",
+      filename: "contract.pdf",
+      embeddedDocument: "base64encodeddocument...",
+    },
+  ],
+};
+```
+
+## Next Steps
+
+<Cards>
+  <Card href="/docs/authentication" title="Authentication">
+    Set up and test HTTP Basic authentication.
+  </Card>
+  <Card href="/docs/managing-companies" title="Managing Companies">
+    Create and manage company profiles.
+  </Card>
+  <Card href="/docs/sending-invoices" title="Sending Invoices">
+    Create and send your first invoice.
+  </Card>
+  <Card href="/docs/receiving-documents" title="Receiving Documents">
+    Process incoming documents using webhooks or polling.
+  </Card>
+  <Card href="/docs/ubl-format-guide" title="UBL Format Guide">
+    Understand UBL structure and fields.
+  </Card>
+  <Card href="/reference" title="Complete API Reference">
+    Explore all endpoints and models.
+  </Card>
+</Cards>
+
+## Support
+
+If you encounter any issues or have questions, our support team is here to help:
+
+- Email: support@recommand.eu
+- GitHub Issues: [github.com/brbxai/recommand-peppol/issues](https://github.com/brbxai/recommand-peppol/issues)

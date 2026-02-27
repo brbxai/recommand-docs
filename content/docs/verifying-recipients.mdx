@@ -1,0 +1,409 @@
+---
+title: Verifying Recipients
+description: Check if a recipient is registered on the Peppol network and supports specific document types before sending, using the Recommand verify endpoint.
+---
+
+This guide explains how to verify if recipients exist in the Peppol network and support specific document types using the [Recommand API](/reference/recipients).
+
+## Overview
+
+Before sending documents through Peppol, it's important to verify if:
+
+1. The recipient is registered in the Peppol network
+2. The recipient can receive the specific document type you want to send
+
+Recommand automatically performs these verifications.
+In some cases, you may want to ensure a recipient is on the Peppol network before sending documents, you can do this through the verification endpoints.
+
+## Prerequisites
+
+- A Recommand account with API access
+- Your API key and secret
+
+## Understanding Peppol Addressing
+
+Peppol participants are identified by a unique Peppol ID, typically structured as: `scheme:identifier`.
+
+Common electronic address schemes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/eas/).
+If no scheme is specified in your requests, "0208" (Belgian Enterprise Number) is assumed.
+
+The identifier is often the company's national identifier, such as a VAT number or enterprise number.
+
+## Verifying if a Recipient Exists
+
+To check if a recipient is registered in the Peppol network using the [verify endpoint](/reference/recipients/verify-recipient):
+
+```javascript
+async function verifyRecipient(peppolAddress) {
+  const response = await fetch("https://app.recommand.eu/api/v1/verify", {
+    method: "POST",
+    headers: {
+      Authorization:
+        "Basic " +
+        Buffer.from("your_api_key:your_api_secret").toString("base64"),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ peppolAddress }),
+  });
+
+  return response.json();
+}
+
+// Example usage
+const result = await verifyRecipient("0208:0123456789");
+console.log("Recipient exists:", result.isValid);
+console.log("SMP URL:", result.smpUrl);
+```
+
+### Response Structure
+
+```json
+{
+  "success": true,
+  "isValid": true,
+  "smpUrl": "https://smp.example.com/..."
+}
+```
+
+- `isValid`: Boolean indicating if the recipient exists in the Peppol network
+- `smpUrl`: The Service Metadata Publisher URL for the recipient
+
+## Verifying Document Type Support
+
+To check if a recipient can receive a specific document type using the [verify document support endpoint](/reference/recipients/verify-document-support):
+
+```javascript
+async function verifyDocumentSupport(peppolAddress, documentType) {
+  const response = await fetch(
+    "https://app.recommand.eu/api/v1/verify-document-support",
+    {
+      method: "POST",
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from("your_api_key:your_api_secret").toString("base64"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ peppolAddress, documentType }),
+    }
+  );
+
+  return response.json();
+}
+
+// Example usage
+const documentType =
+  "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1";
+const result = await verifyDocumentSupport("0208:0123456789", documentType);
+console.log("Document type supported:", result.isValid);
+```
+
+### Common Document Types
+
+| Document                      | Document Type Identifier                                                                                                                                 |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Invoice (BIS Billing 3.0)     | `urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1`       |
+| Credit Note (BIS Billing 3.0) | `urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1` |
+| Order (BIS Ordering 3.0)      | `urn:oasis:names:specification:ubl:schema:xsd:Order-2::Order##urn:fdc:peppol.eu:2017:poacc:ordering:3.0::2.1`                                            |
+
+### Response Structure
+
+```json
+{
+  "success": true,
+  "isValid": true,
+  "smpUrl": "https://smp.example.com/..."
+}
+```
+
+- `isValid`: Boolean indicating if the recipient supports the document type
+- `smpUrl`: The Service Metadata Publisher URL for the recipient
+
+## Searching the Peppol Directory
+
+To find recipients in the Peppol directory using the [search Peppol Directory endpoint](/reference/recipients/search-directory):
+
+```javascript
+async function searchPeppolDirectory(query) {
+  const response = await fetch(
+    "https://app.recommand.eu/api/v1/search-peppol-directory",
+    {
+      method: "POST",
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from("your_api_key:your_api_secret").toString("base64"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query }),
+    }
+  );
+
+  return response.json();
+}
+
+// Example usage
+const searchResults = await searchPeppolDirectory("Company Name");
+console.log("Search results:", searchResults.results);
+```
+
+### Response Structure
+
+```json
+{
+  "success": true,
+  "results": [
+    {
+      "peppolAddress": "0208:0123456789",
+      "name": "Example Company",
+      "supportedDocumentTypes": [
+        "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1"
+      ]
+    }
+  ]
+}
+```
+
+## Complete Verification Workflow
+
+Here's a complete example demonstrating how to implement a verification workflow before sending documents:
+
+```javascript
+// Setup authentication
+const API_KEY = "your_api_key";
+const API_SECRET = "your_api_secret";
+const AUTH =
+  "Basic " + Buffer.from(`${API_KEY}:${API_SECRET}`).toString("base64");
+const BASE_URL = "https://app.recommand.eu/api/peppol";
+
+/**
+ * Verify if recipient exists and supports invoice documents before sending
+ */
+async function verifyAndSendInvoice(companyId, recipientId, invoice) {
+  console.log(`Verifying recipient: ${recipientId}`);
+
+  // Step 1: Verify if recipient exists in Peppol network
+  const verifyResponse = await fetch(`${BASE_URL}/verify`, {
+    method: "POST",
+    headers: {
+      Authorization: AUTH,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ peppolAddress: recipientId }),
+  });
+
+  const verifyResult = await verifyResponse.json();
+  if (!verifyResult.isValid) {
+    console.error(
+      `Recipient ${recipientId} is not registered in the Peppol network`
+    );
+    return {
+      success: false,
+      error: "Recipient not found in Peppol network",
+    };
+  }
+
+  console.log(`Recipient ${recipientId} exists in Peppol network`);
+
+  // Step 2: Verify if recipient supports invoice document type
+  const documentType =
+    "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1";
+
+  const supportResponse = await fetch(`${BASE_URL}/verify-document-support`, {
+    method: "POST",
+    headers: {
+      Authorization: AUTH,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      peppolAddress: recipientId,
+      documentType,
+    }),
+  });
+
+  const supportResult = await supportResponse.json();
+  if (!supportResult.isValid) {
+    console.error(
+      `Recipient ${recipientId} does not support invoice documents`
+    );
+    return {
+      success: false,
+      error: "Recipient does not support invoice documents",
+    };
+  }
+
+  console.log(`Recipient ${recipientId} supports invoice documents`);
+
+  // Step 3: Send the invoice
+  const sendResponse = await fetch(`${BASE_URL}/${companyId}/send`, {
+    method: "POST",
+    headers: {
+      Authorization: AUTH,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      recipient: recipientId,
+      documentType: "invoice",
+      document: invoice,
+    }),
+  });
+
+  const sendResult = await sendResponse.json();
+  if (!sendResult.success) {
+    console.error("Failed to send invoice:", sendResult.errors);
+    return {
+      success: false,
+      errors: sendResult.errors,
+    };
+  }
+
+  console.log("Invoice sent successfully!");
+  return {
+    success: true,
+  };
+}
+
+// Example usage
+const companyId = "your_company_id";
+const recipientId = "0208:0123456789";
+const invoice = {
+  invoiceNumber: "INV-2024-001",
+  issueDate: "2024-05-15",
+  // ... other invoice fields
+};
+
+verifyAndSendInvoice(companyId, recipientId, invoice)
+  .then((result) => {
+    if (result.success) {
+      console.log("Invoice process completed successfully");
+    } else {
+      console.error("Invoice process failed:", result.error || result.errors);
+    }
+  })
+  .catch((error) => {
+    console.error("Error in verification process:", error);
+  });
+```
+
+## Handling Invalid Recipients
+
+When a recipient is not found in the Peppol network, you might want to try different identifier schemes:
+
+```javascript
+async function verifyRecipientWithMultipleSchemes(identifier) {
+  // Try without scheme (defaults to 0208)
+  let result = await verifyRecipient(identifier);
+  if (result.isValid) return result;
+
+  console.log("Recipient not found, trying alternative schemes...");
+
+  // Try with common schemes
+  const schemes = ["0208", "0088", "0192", "0210", "9925"];
+  for (const scheme of schemes) {
+    const peppolAddress = `${scheme}:${identifier}`;
+    console.log(`Trying: ${peppolAddress}`);
+
+    result = await verifyRecipient(peppolAddress);
+    if (result.isValid) {
+      console.log(`Found recipient with scheme ${scheme}`);
+      return result;
+    }
+  }
+
+  console.log("Recipient not found with any common scheme");
+  return { success: true, isValid: false };
+}
+
+// Example usage
+const result = await verifyRecipientWithMultipleSchemes("0123456789");
+```
+
+## Finding Recipients by Name
+
+You can help users find recipients by searching the Peppol directory:
+
+```javascript
+async function findRecipientByName(name) {
+  const searchResponse = await fetch(
+    `https://app.recommand.eu/api/v1/search-peppol-directory`,
+    {
+      method: "POST",
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from("your_api_key:your_api_secret").toString("base64"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query: name }),
+    }
+  );
+
+  const searchResult = await searchResponse.json();
+  if (!searchResult.success || !searchResult.results.length) {
+    console.log("No recipients found matching the name");
+    return [];
+  }
+
+  console.log(
+    `Found ${searchResult.results.length} recipients matching "${name}"`
+  );
+  return searchResult.results;
+}
+
+// Example UI integration
+async function searchAndSelectRecipient(searchTerm) {
+  const recipients = await findRecipientByName(searchTerm);
+
+  if (recipients.length === 0) {
+    console.log("No recipients found matching the name");
+    return null;
+  }
+
+  // Display results to user for selection
+  console.log("Please select a recipient:");
+  recipients.forEach((recipient, index) => {
+    console.log(`${index + 1}. ${recipient.name} (${recipient.peppolAddress})`);
+  });
+
+  // In a real application, you would have UI selection
+  // For this example, we'll just return the first match
+  return recipients[0].peppolAddress;
+}
+
+await searchAndSelectRecipient("BRBX");
+```
+
+## Best Practices
+
+1. **Always verify before sending**: Check recipient existence and document support before sending, either through the Recommand API or by communicating with the recipient directly (out of band)
+2. **Cache verification results**: Store verification results temporarily to reduce API calls
+3. **Implement fallbacks**: Try different identifier schemes if the initial check fails
+4. **Provide search functionality**: Help users find recipients by name or identifier
+5. **Handle errors gracefully**: Provide clear error messages when verification fails
+6. **Validate identifiers**: Ensure identifiers are in the correct format before verification
+
+## Common Issues and Solutions
+
+| Issue                       | Solution                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------ |
+| Recipient not found         | Verify the identifier is correct and try different schemes                           |
+| Document type not supported | Check if the recipient supports a different document format or contact them directly |
+| Network errors              | Implement retry logic with exponential backoff                                       |
+| Invalid identifier format   | Validate the format before verification                                              |
+
+## Next Steps
+
+<Cards>
+  <Card href="/docs/sending-invoices" title="Sending Invoices">
+    Send a verified recipient an invoice.
+  </Card>
+  <Card href="/docs/sending-credit-notes" title="Sending Credit Notes">
+    Correct invoices for verified recipients.
+  </Card>
+  <Card href="/docs/working-with-webhooks" title="Working with Webhooks">
+    Receive inbound document events after sending.
+  </Card>
+  <Card href="/reference" title="Complete API Reference">
+    Explore endpoints for verification and sending.
+  </Card>
+</Cards>

@@ -1,0 +1,246 @@
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
+@import "fumadocs-ui/css/shadcn.css";
+@import "fumadocs-ui/css/preset.css";
+@import "fumadocs-openapi/css/preset.css";
+
+:root {
+  --sheet-light: oklch(98.5% 0.003 78.3);
+  --sheet: oklch(97.09% 0.0045 78.3);
+  --paper: oklch(93.27% 0.0161 82.79);
+  --files: oklch(88.79% 0.0181 92.7);
+  --shadow: oklch(79.58% 0.0208 100.66);
+  --shadow-light: oklch(0.93 0.01 98.88);
+  --stone: oklch(69.25% 0.008 149);
+  --stone-dark: oklch(48% 0.005 149);
+  --folder: oklch(75.66% 0.1426 158.72);
+  --folder-mid: oklch(60% 0.12 158.72);
+  --folder-dark: oklch(0.48 0.0968 157.61);
+
+  --slate: oklch(32% 0.0354 149.18);
+  --darkslate: oklch(26.91% 0.027 148.96);
+
+  --warning: oklch(70.31% 0.1662 45.04);
+  --warning-mid: oklch(58% 0.15 45.04);
+  --warning-dark: oklch(0.45 0.1296 41.65);
+  --danger: oklch(65% 0.15 30);
+  --danger-mid: oklch(55% 0.14 30);
+  --danger-dark: oklch(44% 0.12 30);
+  --data: oklch(89.46% 0.1231 93.95);
+  --data-mid: oklch(0.65 0.1306 89.78);
+  --data-dark: oklch(58% 0.13 89.78);
+  --progress: oklch(63.08% 0.1404 258.32);
+  --progress-mid: oklch(53% 0.14 258.32);
+  --const: oklch(84.65% 0.0705 307.54);
+
+  --radius: 0.625rem;
+
+  /* Fumadocs callout colors - must be in :root for runtime var() resolution */
+  --color-fd-secondary: var(--shadow-light);
+  --color-fd-info: var(--progress);
+  --color-fd-warning: var(--warning);
+  --color-fd-error: var(--danger);
+  --color-fd-success: var(--folder);
+
+  --background: var(--sheet);
+  --foreground: var(--darkslate);
+  --card: var(--sheet-light);
+  --card-foreground: var(--darkslate);
+  --popover: var(--sheet-light);
+  --popover-foreground: var(--darkslate);
+  --primary: var(--slate);
+  --primary-foreground: var(--sheet);
+  --secondary: var(--files);
+  --secondary-foreground: var(--darkslate);
+  --muted: var(--shadow-light);
+  --muted-foreground: var(--stone-dark);
+  --accent: var(--folder);
+  --accent-foreground: var(--darkslate);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--sheet);
+  --success: var(--folder);
+  --success-foreground: var(--darkslate);
+  --border: var(--shadow);
+  --input: var(--files);
+  --ring: var(--stone);
+  --chart-1: var(--folder);
+  --chart-2: var(--warning);
+  --chart-3: var(--data);
+  --chart-4: var(--progress);
+  --chart-5: var(--data);
+  --sidebar: var(--sheet);
+  --sidebar-foreground: var(--darkslate);
+  --sidebar-primary: var(--slate);
+  --sidebar-primary-foreground: var(--sheet);
+  --sidebar-accent: var(--folder);
+  --sidebar-accent-foreground: var(--darkslate);
+  --sidebar-border: var(--shadow);
+  --sidebar-ring: var(--stone);
+}
+
+.dark {
+  /* Semantic mappings — same palette, reassigned for dark mode */
+  --background: var(--darkslate);
+  --foreground: var(--sheet);
+  --card: var(--darkslate);
+  --card-foreground: var(--sheet);
+  --popover: var(--darkslate);
+  --popover-foreground: var(--sheet-light);
+  --primary: var(--sheet);
+  --primary-foreground: var(--darkslate);
+  --secondary: var(--stone-dark);
+  --secondary-foreground: var(--sheet);
+  --muted: var(--slate);
+  --muted-foreground: var(--stone);
+  --accent: var(--folder-dark);
+  --accent-foreground: var(--sheet);
+  --destructive: var(--danger-mid);
+  --destructive-foreground: var(--sheet);
+  --success: var(--folder);
+  --success-foreground: var(--darkslate);
+  --border: var(--stone-dark);
+  --input: color-mix(in oklch, var(--stone-dark) 50%, var(--darkslate));
+  --ring: var(--stone);
+  --chart-1: var(--folder);
+  --chart-2: var(--warning);
+  --chart-3: var(--data);
+  --chart-4: var(--progress);
+  --chart-5: var(--data);
+  --sidebar: var(--darkslate);
+  --sidebar-foreground: var(--sheet);
+  --sidebar-primary: var(--sheet);
+  --sidebar-primary-foreground: var(--darkslate);
+  --sidebar-accent: var(--folder-dark);
+  --sidebar-accent-foreground: var(--sheet);
+  --sidebar-border: var(--stone-dark);
+  --sidebar-ring: var(--stone);
+
+  /* Fumadocs callout colors */
+  --color-fd-secondary: var(--slate);
+  --color-fd-info: var(--progress);
+  --color-fd-warning: var(--warning);
+  --color-fd-error: var(--danger);
+  --color-fd-success: var(--folder);
+}
+
+@theme inline {
+  --color-sheet-light: var(--sheet-light);
+  --color-sheet: var(--sheet);
+  --color-paper: var(--paper);
+  --color-files: var(--files);
+  --color-shadow: var(--shadow);
+  --color-shadow-light: var(--shadow-light);
+  --color-stone: var(--stone);
+  --color-stone-dark: var(--stone-dark);
+  --color-folder: var(--folder);
+  --color-folder-dark: var(--folder-dark);
+  --color-slate: var(--slate);
+  --color-darkslate: var(--darkslate);
+  --color-warning: var(--warning);
+  --color-warning-mid: var(--warning-mid);
+  --color-warning-dark: var(--warning-dark);
+  --color-danger: var(--danger);
+  --color-danger-dark: var(--danger-dark);
+  --color-data: var(--data);
+  --color-data-dark: var(--data-dark);
+  --color-progress: var(--progress);
+  --color-const: var(--const);
+
+  /* Override Tailwind colors used by fumadocs-openapi method badges */
+  --color-green-600: var(--folder-mid);
+  --color-blue-600: var(--progress-mid);
+  --color-yellow-600: var(--data-mid);
+  --color-orange-600: var(--warning-mid);
+  --color-red-600: var(--danger-mid);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-rethink-sans);
+  --font-heading: var(--font-nohemi);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Make active navbar links visually distinct */
+#nd-home-layout nav a[data-active="true"] {
+  font-weight: 500;
+  color: var(--color-fd-foreground);
+}
+
+/* Override all fumadocs accent/80 hovers to use the full accent color */
+.hover\:bg-fd-accent\/80:hover {
+  background-color: var(--color-fd-accent) !important;
+}
+
+/* Consistent accent hover color in sidebar */
+#nd-sidebar a:hover,
+#nd-sidebar button:hover {
+  background-color: var(--color-fd-accent) !important;
+}
+
+/* --- Fumadocs fd-secondary overrides ---
+ * Fumadocs uses bg-fd-secondary for inputs, tabs, code blocks, badges, etc.
+ * We set it to --paper (lighter, less saturated than --files) globally,
+ * then make playground form inputs transparent to match our app form pattern.
+ */
+
+/* API playground: inputs & textareas get transparent bg with existing border */
+form.not-prose input,
+form.not-prose textarea {
+  background-color: transparent !important;
+}
+
+/* API playground: select triggers get transparent bg */
+form.not-prose button[role="combobox"] {
+  background-color: transparent !important;
+}
+
+/* Account for HomeLayout navbar height in nested DocsLayout */
+#nd-home-layout #nd-docs-layout {
+  --fd-banner-height: 3.5rem;
+  --fd-docs-height: calc(100dvh - 3.5rem);
+}

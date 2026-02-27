@@ -1,0 +1,12 @@
+{
+  "title": "FAQ",
+  "pages": [
+    "general-usage",
+    "peppol-basics",
+    "addressing-and-delivery",
+    "sending-and-error-handling",
+    "api-and-development",
+    "security-and-certification",
+    "vat-and-accounting"
+  ]
+}

@@ -1,0 +1,13 @@
+---
+title: Peppol message tracking information for incoming documents
+description: Added Peppol message ID and conversation ID tracking to received documents.
+date: 2025-12-23
+---
+
+We've extended Peppol message tracking information to incoming documents, providing the same visibility into document transmission for received documents as we already had for outgoing documents.
+
+### What changed
+
+Incoming documents now include `peppolMessageId` and `peppolConversationId` fields that capture metadata from the Peppol AS4 network. These fields are accessible through the dashboard and the API.
+This provides better visibility into the Peppol network's handling of your received documents and helps with debugging delivery issues and tracking document flow.
+

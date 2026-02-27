@@ -1,0 +1,15 @@
+---
+title: Peppol Test Network support for playgrounds
+description: Allow playground teams to connect to the Peppol Test Network for end‑to‑end testing with real Peppol participants.
+date: 2025-12-02
+---
+
+We’ve added optional Peppol Test Network support for playground environments.
+
+### What changed
+
+- **Test Network playgrounds**: When creating a playground, you can now choose to connect it to the Peppol Test Network, instead of keeping it fully isolated.
+- **Correct routing and credentials**: Documents sent from a Test Network playground use dedicated AP/SMP endpoints and tokens, and companies/identifiers are registered against the matching test infrastructure.
+- **Safer separation from production**: Production teams and non‑Test Network playgrounds remain unchanged and do not interact with the Peppol Test Network.
+
+This makes it possible to run realistic end‑to‑end Peppol tests while still keeping production traffic fully separated.

@@ -1,0 +1,381 @@
+---
+title: Managing Companies
+description: Create, update, list, and delete company profiles in Recommand for Peppol document exchange. Includes Peppol registration and field reference.
+---
+
+This guide explains how to create, update, and manage company profiles in Recommand for Peppol document exchange using the [Recommand API](/reference/companies).
+
+## Overview
+
+A company in Recommand represents a business entity that can send or receive Peppol documents. Each company must be registered before it can participate in document exchange.
+
+<Callout type="warn" title="Only add companies you operate">
+  Only add companies that you are responsible for — typically your own organization or entities you manage. Do not add companies that you send documents to (customers) or receive documents from (suppliers). Those companies manage their own Peppol registration independently. Trying to add them to your account will cause registration conflicts.
+</Callout>
+
+## Prerequisites
+
+- A Recommand account with API access
+- Your API key and secret
+- Your team ID
+
+## Retrieving Your Team ID
+
+Your team ID is required for most company management operations. You can find it in the Recommand dashboard under [Account > API Keys](https://app.recommand.eu/api-keys).
+
+## Listing Companies
+
+To retrieve all companies associated with your team using the [list companies endpoint](/reference/companies/get-companies):
+
+```javascript
+async function listCompanies() {
+  const response = await fetch(
+    `https://app.recommand.eu/api/v1/companies`,
+    {
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from("your_api_key:your_api_secret").toString("base64"),
+      },
+    }
+  );
+
+  const result = await response.json();
+  return result.companies;
+}
+
+// Example usage
+const companies = await listCompanies("your_team_id");
+companies.forEach((company) => {
+  console.log(`${company.name} (${company.id})`);
+});
+```
+
+## Creating a Company
+
+To create a new company using the [create company endpoint](/reference/companies/create-company).
+When creating a new company, it is automatically registered in the Peppol network.
+If the company is already registered through another provider, this will fail.
+Companies that are registered with the Belgian government portal Hermes (as is the case for most Belgian companies) are automatically migrated over to Recommand.
+
+```javascript
+async function createCompany(companyData) {
+  const response = await fetch(
+    `https://app.recommand.eu/api/v1/companies`,
+    {
+      method: "POST",
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from("your_api_key:your_api_secret").toString("base64"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(companyData),
+    }
+  );
+
+  return response.json();
+}
+
+// Example usage
+const newCompany = await createCompany("your_team_id", {
+  name: "ACME Corporation",
+  address: "123 Main Street",
+  postalCode: "1000",
+  city: "Brussels",
+  country: "BE",
+  enterpriseNumber: "0123456789",
+  vatNumber: "BE0123456789",
+});
+
+if (newCompany.success) {
+  console.log(`Company created with ID: ${newCompany.company.id}`);
+} else {
+  console.error("Failed to create company:", newCompany.errors);
+}
+```
+
+### Company Fields
+
+| Field              | Description                      | Required | Example              |
+| ------------------ | -------------------------------- | -------- | -------------------- |
+| `name`             | Company name                     | Yes      | `"ACME Corporation"` |
+| `address`          | Street address                   | Yes      | `"123 Main Street"`  |
+| `postalCode`       | Postal/zip code                  | Yes      | `"1000"`             |
+| `city`             | City                             | Yes      | `"Brussels"`         |
+| `country`          | Country code (2-letter ISO code) | Yes      | `"BE"`               |
+| `enterpriseNumber` | Enterprise number                | No       | `"0123456789"`       |
+| `vatNumber`        | VAT registration number          | No       | `"BE0123456789"`     |
+
+## Retrieving a Company
+
+To get details about a specific company using the [get company endpoint](/reference/companies/get-company):
+
+```javascript
+async function getCompany(companyId) {
+  const response = await fetch(
+    `https://app.recommand.eu/api/v1/companies/${companyId}`,
+    {
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from("your_api_key:your_api_secret").toString("base64"),
+      },
+    }
+  );
+
+  return response.json();
+}
+
+// Example usage
+const companyDetails = await getCompany("your_team_id", "company_id");
+if (companyDetails.success) {
+  console.log(companyDetails.company);
+} else {
+  console.error("Failed to retrieve company:", companyDetails.errors);
+}
+```
+
+## Updating a Company
+
+To update an existing company using the [update company endpoint](/reference/companies/update-company):
+
+```javascript
+async function updateCompany(companyId, updatedData) {
+  const response = await fetch(
+    `https://app.recommand.eu/api/v1/companies/${companyId}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from("your_api_key:your_api_secret").toString("base64"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(updatedData),
+    }
+  );
+
+  return response.json();
+}
+
+// Example usage
+const updateResult = await updateCompany("company_id", {
+  name: "ACME Corporation Updated",
+  address: "456 New Street",
+  postalCode: "1000",
+  city: "Brussels",
+  country: "BE",
+  enterpriseNumber: "0123456789",
+  vatNumber: "BE0123456789",
+});
+
+if (updateResult.success) {
+  console.log("Company updated successfully");
+} else {
+  console.error("Failed to update company:", updateResult.errors);
+}
+```
+
+## Deleting a Company
+
+To delete a company using the [delete company endpoint](/reference/companies/delete-company):
+
+```javascript
+async function deleteCompany(companyId) {
+  const response = await fetch(
+    `https://app.recommand.eu/api/v1/companies/${companyId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from("your_api_key:your_api_secret").toString("base64"),
+      },
+    }
+  );
+
+  return response.json();
+}
+
+// Example usage
+const deleteResult = await deleteCompany("your_team_id", "company_id");
+if (deleteResult.success) {
+  console.log("Company deleted successfully");
+} else {
+  console.error("Failed to delete company:", deleteResult.errors);
+}
+```
+
+## Complete Example: Company Management
+
+Here's a full example of creating, updating, and managing companies:
+
+```javascript
+// Setup authentication
+const API_KEY = "your_api_key";
+const API_SECRET = "your_api_secret";
+const TEAM_ID = "your_team_id";
+const auth =
+  "Basic " + Buffer.from(`${API_KEY}:${API_SECRET}`).toString("base64");
+const baseUrl = "https://app.recommand.eu/api/peppol";
+
+// Create a new company
+async function createCompany() {
+  const response = await fetch(`${baseUrl}/companies`, {
+    method: "POST",
+    headers: {
+      Authorization: auth,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: "Test Company",
+      address: "123 Test Street",
+      postalCode: "1000",
+      city: "Brussels",
+      country: "BE",
+      enterpriseNumber: "0123456789",
+      vatNumber: "BE0123456789",
+    }),
+  });
+
+  const result = await response.json();
+  if (result.success) {
+    console.log(`Company created with ID: ${result.company.id}`);
+    return result.company.id;
+  } else {
+    console.error("Failed to create company:", result.errors);
+    return null;
+  }
+}
+
+// List all companies
+async function listCompanies() {
+  const response = await fetch(`${baseUrl}/companies`, {
+    headers: { Authorization: auth },
+  });
+
+  const result = await response.json();
+  if (result.success) {
+    console.log("Companies:");
+    result.companies.forEach((company) => {
+      console.log(`- ${company.name} (${company.id})`);
+    });
+    return result.companies;
+  } else {
+    console.error("Failed to list companies:", result.errors);
+    return [];
+  }
+}
+
+// Update a company
+async function updateCompany(companyId) {
+  const response = await fetch(`${baseUrl}/companies/${companyId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: auth,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: "Updated Test Company",
+      address: "456 Updated Street",
+      postalCode: "1000",
+      city: "Brussels",
+      country: "BE",
+      enterpriseNumber: "0123456789",
+      vatNumber: "BE0123456789",
+    }),
+  });
+
+  const result = await response.json();
+  if (result.success) {
+    console.log("Company updated successfully");
+    return true;
+  } else {
+    console.error("Failed to update company:", result.errors);
+    return false;
+  }
+}
+
+// Delete a company
+async function deleteCompany(companyId) {
+  const response = await fetch(`${baseUrl}/companies/${companyId}`, {
+    method: "DELETE",
+    headers: { Authorization: auth },
+  });
+
+  const result = await response.json();
+  if (result.success) {
+    console.log("Company deleted successfully");
+    return true;
+  } else {
+    console.error("Failed to delete company:", result.errors);
+    return false;
+  }
+}
+
+// Example workflow
+async function manageCompanies() {
+  // List existing companies
+  console.log("Existing companies:");
+  await listCompanies();
+
+  // Create a new company
+  console.log("\nCreating a new company...");
+  const companyId = await createCompany();
+  if (!companyId) return;
+
+  // List companies again to see the new one
+  console.log("\nUpdated company list:");
+  await listCompanies();
+
+  // Update the company
+  console.log("\nUpdating the company...");
+  await updateCompany(companyId);
+
+  // List companies again to see the update
+  console.log("\nAfter update:");
+  await listCompanies();
+
+  // Delete the company
+  console.log("\nDeleting the company...");
+  await deleteCompany(companyId);
+
+  // Final company list
+  console.log("\nFinal company list:");
+  await listCompanies();
+}
+
+// Run the workflow
+manageCompanies().catch((error) => {
+  console.error("Error in company management workflow:", error);
+});
+```
+
+## Best Practices
+
+1. **Check Peppol Registration**: Before creating a company, check if the company is already registered in the Peppol network.
+2. **Validate data**: Ensure company information is accurate before creating or updating
+3. **Handle errors**: Implement proper error handling for API responses
+4. **Check before delete**: Ensure a company is not in use before deleting it
+5. **Limit company creation**: Create only the companies you need to avoid clutter
+
+## Next Steps
+
+<Cards>
+  <Card href="/docs/sending-invoices" title="Sending Invoices">
+    Create and send invoices from your companies.
+  </Card>
+  <Card href="/docs/sending-credit-notes" title="Sending Credit Notes">
+    Issue credit notes to correct invoices.
+  </Card>
+  <Card href="/docs/working-with-webhooks" title="Working with Webhooks">
+    Receive events across your companies and teams.
+  </Card>
+  <Card href="/docs/verifying-recipients" title="Verifying Recipients">
+    Check recipients before sending documents.
+  </Card>
+  <Card href="/reference" title="Complete API Reference">
+    Explore all endpoints and models.
+  </Card>
+</Cards>

@@ -1,0 +1,21 @@
+---
+title: Document detail page with generated document preview
+description: Added a rich document detail view in the dashboard, with HTML preview and PDF generation for transmitted documents.
+date: 2025-11-28
+---
+
+We’ve introduced a new **document detail page** in the dashboard so you can better inspect individual transmissions.
+
+### What changed
+
+- **New document detail view**:
+  - Each transmitted document now has a dedicated page with a clear layout for metadata, sender/receiver information, and delivery status.
+  - You can navigate to this page directly from the transmitted documents table via a shortened document ID link.
+- **HTML document preview**:
+  - A new internal `/documents/:documentId/render` API endpoint renders a human‑friendly HTML representation of a transmitted document.
+  - The dashboard consumes this endpoint to show a styled billing document preview, making it easier to review invoices and credit notes without leaving Recommand.
+- **PDF in download package**:
+  - When downloading a document package, Recommand now attempts to generate a `auto-generated.pdf` using the same billing template.
+  - If PDF generation fails, the rest of the package (XML and other artifacts) is still returned.
+
+These changes make it much easier to understand, review, and share individual Peppol documents directly from the dashboard.

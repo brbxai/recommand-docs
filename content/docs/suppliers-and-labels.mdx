@@ -1,0 +1,270 @@
+---
+title: Suppliers and Labels
+description: Use suppliers and labels to route incoming Peppol documents, categorize vendors, and build automated integration workflows with the Recommand API.
+---
+
+This guide explains how to use Suppliers (supporting data) together with Labels to build powerful routing and integration workflows. It covers syncing suppliers, managing labels, automatic label propagation to documents, manual labeling, and webhook events you can use to react to changes.
+
+## Overview
+
+- **Suppliers**: Your master data for vendors. Suppliers can be created or updated via the API and support `externalId` so you can sync your own IDs without changing existing systems.
+- **Labels**: Team-level tags you can attach to suppliers and documents. Labels enable flexible routing, categorization and downstream integrations.
+- **Automatic propagation**: When an incoming document is matched to a supplier, the supplier’s labels are automatically attached to that document.
+- **Manual labeling**: You can attach or remove labels from documents manually via the API.
+- **Webhooks**: Label changes and new documents emit webhook events you can consume to drive automations.
+
+Common routing patterns:
+
+- Apply a label such as `"ERP"` to all invoices from specific suppliers to route them to an internal ERP.
+- Keep other invoices unlabelled until a human adds e.g. `"Accounting"` or `"ERP"`, then your integration picks them up and forwards them accordingly.
+
+### Using Suppliers and Labels in the dashboard
+
+You can also manage suppliers, labels, and document labeling directly from the Recommand dashboard:
+
+- **Labels**: Manage team-level labels from `Labels`.
+- **Suppliers**: View and edit suppliers from `Supporting data > Suppliers`, including their labels.
+- **Documents**: See and adjust labels on sent and received documents from `Sent and received`.
+
+These dashboard views operate on the same **team-scoped suppliers and labels** as the API, so changes made via the UI and via the API stay in sync.
+
+## Prerequisites
+
+- A Recommand account with API access
+- Your API key and secret
+
+```javascript
+// Shared auth setup used in examples
+const API_KEY = "your_api_key";
+const API_SECRET = "your_api_secret";
+export const AUTH =
+  "Basic " + Buffer.from(`${API_KEY}:${API_SECRET}`).toString("base64");
+export const BASE_URL = "https://app.recommand.eu/api/peppol";
+```
+
+## Suppliers
+
+Suppliers are supporting data you can sync from your systems. They support:
+
+- `id`: Internal Recommand ID
+- `externalId`: Your own identifier (optional). If provided, you can upsert by `externalId`.
+- `name`, `vatNumber`, `peppolAddresses` (array of Peppol IDs), and `labels`.
+
+### Upsert a Supplier
+
+Use the [Upsert Supplier endpoint](/reference/suppliers/upsert-supplier). If `id` is provided, updates by `id`. Otherwise if `externalId` is provided, it updates or creates based on `externalId`; if neither is provided, it creates a new supplier.
+
+```javascript
+// Create or update a supplier
+async function upsertSupplier(data) {
+  const res = await fetch(`${BASE_URL}/suppliers`, {
+    method: "POST",
+    headers: { Authorization: AUTH, "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+// Examples
+await upsertSupplier({
+  name: "Contoso BV",
+  externalId: "sup_12345", // your own ID
+  vatNumber: "BE0123456789",
+  peppolAddresses: ["0208:0123456789"],
+});
+
+await upsertSupplier({
+  id: "internal_supplier_id", // update by internal id
+  name: "Contoso BVBA",
+});
+```
+
+### List and Search Suppliers
+
+Use the [List Suppliers endpoint](/reference/suppliers/get-suppliers) with pagination and search.
+
+```javascript
+async function listSuppliers({ page = 1, limit = 10, search = "" } = {}) {
+  const url = new URL(`${BASE_URL}/suppliers`);
+  url.searchParams.set("page", String(page));
+  url.searchParams.set("limit", String(limit));
+  if (search) url.searchParams.set("search", search);
+
+  const res = await fetch(url, { headers: { Authorization: AUTH } });
+  return res.json();
+}
+```
+
+## Labels
+
+Labels are team-level tags you can attach to both suppliers and documents. They are useful for:
+
+- Routing (e.g., `"ERP"`, `"Accounting"`)
+- Categorization (e.g., `"High Value"`, `"Subscription"`)
+- Filtering and downstream processing
+
+### Create and Manage Labels
+
+- Create: [Create Label](/reference/labels/create-label)
+- List: [List Labels](/reference/labels/get-labels)
+- Update/Delete: see Label endpoints under the “Labels” tag.
+
+```javascript
+async function createLabel(name, colorHex, externalId = null) {
+  const res = await fetch(`${BASE_URL}/labels`, {
+    method: "POST",
+    headers: { Authorization: AUTH, "Content-Type": "application/json" },
+    body: JSON.stringify({ name, colorHex, externalId }),
+  });
+  return res.json();
+}
+
+// Example
+await createLabel("ERP", "#3B82F6");
+await createLabel("Accounting", "#10B981");
+```
+
+### Assign/Unassign Labels to Suppliers
+
+Use supplier-label endpoints:
+
+- Assign: [POST](/reference/suppliers/assign-label-to-supplier)
+- Unassign: [DELETE](/reference/suppliers/unassign-label-from-supplier)
+
+```javascript
+async function assignLabelToSupplier(supplierId, labelId) {
+  const res = await fetch(
+    `${BASE_URL}/suppliers/${supplierId}/labels/${labelId}`,
+    { method: "POST", headers: { Authorization: AUTH } }
+  );
+  return res.json();
+}
+
+async function unassignLabelFromSupplier(supplierId, labelId) {
+  const res = await fetch(
+    `${BASE_URL}/suppliers/${supplierId}/labels/${labelId}`,
+    { method: "DELETE", headers: { Authorization: AUTH } }
+  );
+  return res.json();
+}
+```
+
+## Automatic Label Propagation to Documents
+
+When an incoming document is matched to a supplier, the supplier’s labels are automatically attached to that document. This means you can:
+
+- Maintain labeling logic centrally on suppliers
+- Have documents consistently inherit the correct labels for routing
+
+## Manually Label Documents
+
+You can also attach or remove labels on specific documents:
+
+- Assign: [POST](/reference/documents/assign-label-to-document)
+- Unassign: [DELETE](/reference/documents/unassign-label-from-document)
+
+```javascript
+async function assignLabelToDocument(documentId, labelId) {
+  const res = await fetch(
+    `${BASE_URL}/documents/${documentId}/labels/${labelId}`,
+    { method: "POST", headers: { Authorization: AUTH } }
+  );
+  return res.json();
+}
+
+async function unassignLabelFromDocument(documentId, labelId) {
+  const res = await fetch(
+    `${BASE_URL}/documents/${documentId}/labels/${labelId}`,
+    { method: "DELETE", headers: { Authorization: AUTH } }
+  );
+  return res.json();
+}
+```
+
+## Webhook Events for Routing
+
+Use webhooks to react in real-time when labels change. See [Webhooks CRUD](/reference/webhooks).
+
+Relevant label events:
+
+- `document.label.assigned`
+- `document.label.unassigned`
+
+For reacting to newly arrived documents, use the `document.received` event documented in the [Working with Webhooks](/docs/working-with-webhooks) guide.
+
+Payload basics (label events):
+
+```json
+{
+  "eventType": "document.label.assigned | document.label.unassigned",
+  "documentId": "doc_123",
+  "teamId": "team_123",
+  "companyId": "c_123",
+  "labelId": "lab_456" // only for label events
+}
+```
+
+Recommendations:
+
+- Include a secret token in your webhook URL (e.g., as a path segment or query param) and verify it server-side.
+- Respond quickly with 200 OK; process work asynchronously.
+- Implement retry/backoff in your downstream processing.
+
+### Example: Route by Labels
+
+```javascript
+// Express-style example
+app.post("/peppol-webhook", async (req, res) => {
+  const event = req.body;
+  // Optional: verify a secret token in the webhook URL
+  res.status(200).send("OK");
+
+  try {
+    if (event.eventType?.startsWith("document.label.")) {
+      // Fetch full document to inspect labels
+      const docRes = await fetch(`${BASE_URL}/documents/${event.documentId}`, {
+        headers: { Authorization: AUTH },
+      });
+      const { success, document } = await docRes.json();
+      if (!success) return;
+
+      const labelNames = new Set((document.labels || []).map((l) => l.name));
+
+      if (labelNames.has("ERP")) {
+        await forwardToERP(document);
+      } else if (labelNames.has("Accounting")) {
+        await forwardToAccounting(document);
+      } else {
+        // leave unprocessed for manual review, or notify a queue
+      }
+    }
+  } catch (err) {
+    console.error("Routing error:", err);
+  }
+});
+```
+
+## Best Practices
+
+1. Model your routing with labels; keep supplier labels as the source of truth where possible.
+2. Use `externalId` when syncing suppliers to avoid changing your internal IDs.
+3. Prefer webhooks over polling for timely integrations.
+4. For manual workflows, let users add labels like `"ERP"` or `"Accounting"` to trigger downstream actions.
+5. Implement safe retries and idempotency in your integrations to avoid duplicate processing.
+
+## Next Steps
+
+<Cards>
+  <Card href="/docs/working-with-webhooks" title="Working with Webhooks">
+    Set up webhooks and process document events.
+  </Card>
+  <Card href="/reference/suppliers" title="Suppliers API">
+    Upsert, list, and manage suppliers.
+  </Card>
+  <Card href="/reference/labels" title="Labels API">
+    Create and manage labels.
+  </Card>
+  <Card href="/reference/documents" title="Documents API">
+    Label documents, download packages, and more.
+  </Card>
+</Cards>

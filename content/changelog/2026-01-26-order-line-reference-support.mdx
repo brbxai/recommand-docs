@@ -1,0 +1,24 @@
+---
+title: Order line reference support
+description: Added support for order line references on invoice and credit note line items, allowing you to link invoice lines back to specific purchase order lines.
+date: 2026-01-26
+---
+
+You can now include **order line references** on invoice and credit note line items, making it easier to track which purchase order lines correspond to each invoice line.
+
+### What changed
+
+- **Order line reference field**: Added optional `orderLineReference` field to invoice and credit note line items
+- **UBL support**: Order line references are included in the generated UBL XML and parsed from incoming documents
+- **Bidirectional support**: Works for both sending and receiving documents
+
+### Why this matters
+
+Order line references are essential for:
+
+- **Purchase order tracking**: Link invoice lines back to specific lines in purchase orders
+- **Better traceability**: Track which order line each invoice line corresponds to
+- **Automated reconciliation**: Help systems automatically match invoices to purchase orders
+- **Compliance**: Meet requirements for referencing purchase orders in invoices
+
+This update improves traceability and helps with purchase order reconciliation workflows.

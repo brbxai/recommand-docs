@@ -1,0 +1,28 @@
+---
+title: Outgoing document validation now always enforced
+description: Removed the option to disable outgoing document validation. All outgoing documents must now pass Peppol validation before being sent.
+date: 2026-01-02
+---
+
+Peppol document validation is now **always enforced** for all outgoing documents. The option to disable validation at the company level has been removed as communicated previously.
+
+### What changed
+
+- **Validation always enforced**: All outgoing documents, including invoices and credit notes, must pass EN16931 / Peppol BIS 3.0 validation before being sent.
+- **Removed company setting**: The `isOutgoingDocumentValidationEnforced` parameter has been removed from company creation and update endpoints. Validation enforcement can no longer be disabled.
+- **Clear error messages**: Documents that fail validation will not be sent, and you'll receive detailed error messages indicating what must be corrected.
+
+### Why this matters
+
+Enforcing validation before sending helps:
+- **Reduce failed deliveries**: Catch compliance issues before documents enter the Peppol network
+- **Avoid downstream rejections**: Ensure documents meet recipient and access point requirements
+- **Improve data quality**: Better automation and processing for recipients
+
+### What you need to do
+
+- **If you generate XML yourself**: Ensure your UBL documents comply with EN16931 / Peppol BIS 3.0 standards.
+- **Review existing documents**: Check the dashboard for any documents marked with "Document Validation Issues" and address the listed errors.
+
+This change improves interoperability across the Peppol network and helps ensure reliable document delivery.
+

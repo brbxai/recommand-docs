@@ -1,0 +1,16 @@
+---
+title: Commodity classifications support
+description: Added support for commodity classifications on invoice and credit note line items, enabling you to include product classification codes like HS codes, UNSPSC, serial numbers, and many others.
+date: 2026-01-26
+---
+
+You can now include **commodity classifications** on invoice and credit note line items, supporting a wide range of classification schemes for product categorization and compliance.
+
+### What changed
+
+- **Commodity classifications field**: Added optional `commodityClassifications` array to invoice and credit note line items
+- **Multiple classification schemes**: Support for 200+ classification schemes including many industry-specific codes
+- **UBL support**: Commodity classifications are included in the generated UBL XML and parsed from incoming documents
+- **Bidirectional support**: Works for both sending and receiving documents
+
+This update improves compliance capabilities and enables better product categorization across different industries and use cases.

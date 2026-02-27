@@ -1,0 +1,464 @@
+---
+title: Troubleshooting Guide
+description: Diagnose and fix common Recommand Peppol API issues including authentication errors, validation failures, webhook problems, and document delivery issues.
+---
+
+This guide addresses common issues you may encounter when using the Recommand Peppol API and how to resolve them.
+
+## Authentication Issues
+
+### 401 Unauthorized Errors
+
+If you receive a `401 Unauthorized` response:
+
+```json
+{
+  "success": false,
+  "error": "Unauthorized"
+}
+```
+
+**Possible causes and solutions:**
+
+1. **Invalid API credentials**
+
+   - Verify your API key and secret are correct
+   - Check for extra spaces or special characters in your credentials
+   - Try regenerating your API key in the dashboard
+
+2. **Incorrect authentication format**
+   - Ensure you're using Basic Authentication correctly
+
+```javascript
+// Correct format
+const auth = "Basic " + Buffer.from("key_xxx:secret_xxx").toString("base64");
+
+// Incorrect format (missing 'Basic ' prefix)
+const auth = Buffer.from("key_xxx:secret_xxx").toString("base64");
+```
+
+3. **Revoked API key**
+   - Check the API key status in your dashboard
+   - Generate a new API key if necessary
+
+### Testing Authentication
+
+```javascript
+async function testAuthentication() {
+  try {
+    const response = await fetch("https://app.recommand.eu/api/v1/companies", {
+      headers: {
+        Authorization:
+          "Basic " + Buffer.from("key_xxx:secret_xxx").toString("base64"),
+      },
+    });
+
+    const statusCode = response.status;
+    const body = await response.json();
+
+    console.log(`Status code: ${statusCode}`);
+    console.log("Response body:", body);
+
+    return statusCode === 200;
+  } catch (error) {
+    console.error("Authentication test failed:", error);
+    return false;
+  }
+}
+```
+
+## Recipient Verification Problems
+
+### Invalid Recipients
+
+If a recipient verification fails when using the [verify endpoint](/reference/recipients/verify-recipient):
+
+```json
+{
+  "success": true,
+  "isValid": false
+}
+```
+
+**Possible causes and solutions:**
+
+1. **Incorrect Peppol ID format**
+
+   - Ensure the format is `schemeID:value` (e.g., `0208:0123456789`)
+   - If no scheme is provided, `0208` (Belgian Enterprise Number) is assumed
+
+2. **Recipient not in Peppol network**
+   - Confirm the organization is registered in Peppol
+   - Try different identifier schemes (0088, 0192, 0210, 9925)
+
+```javascript
+// Try different schemes
+const schemes = ["0208", "0088", "0192", "0210", "9925"];
+for (const scheme of schemes) {
+  const result = await verifyRecipient(`${scheme}:${identifier}`);
+  if (result.isValid) {
+    console.log(`Found with scheme: ${scheme}`);
+    return result;
+  }
+}
+```
+
+3. **Network or SML service issues**
+   - Implement retry logic with exponential backoff
+
+```javascript
+async function verifyWithRetry(peppolAddress, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await verifyRecipient(peppolAddress);
+      return result;
+    } catch (error) {
+      console.log(`Attempt ${attempt} failed. Retrying...`);
+      if (attempt < maxRetries) {
+        await new Promise((r) => setTimeout(r, 1000 * attempt));
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+```
+
+## Document Sending Failures
+
+### Validation Errors
+
+If document validation fails when using the [send document endpoint](/reference/sending/send-document):
+
+```json
+{
+  "success": false,
+  "errors": {
+    "invoiceNumber": ["Invoice number is required"],
+    "buyer.vatNumber": ["Invalid VAT number format"]
+  }
+}
+```
+
+**Possible causes and solutions:**
+
+1. **Missing required fields**
+
+   - Check that all required fields are provided
+   - Common required fields: invoiceNumber, buyer information, lines, paymentMeans
+
+2. **Invalid data formats**
+
+   - Ensure dates are in YYYY-MM-DD format
+   - Verify monetary amounts are strings with 2 decimal places (e.g., "100.00")
+   - Check VAT numbers follow country-specific formats
+
+3. **Inconsistent data**
+   - Ensure line totals match invoice totals if manually specified
+   - Verify VAT calculations are correct
+
+### Debugging Tool: Field Validation
+
+```javascript
+function validateInvoice(invoice) {
+  const requiredFields = ["invoiceNumber", "buyer", "paymentMeans", "lines"];
+  const errors = {};
+
+  // Check required fields
+  for (const field of requiredFields) {
+    if (!invoice[field]) {
+      errors[field] = [`${field} is required`];
+    }
+  }
+
+  // Check buyer fields
+  if (invoice.buyer) {
+    const buyerFields = [
+      "vatNumber",
+      "name",
+      "street",
+      "city",
+      "postalZone",
+      "country",
+    ];
+    for (const field of buyerFields) {
+      if (!invoice.buyer[field]) {
+        errors[`buyer.${field}`] = [`buyer.${field} is required`];
+      }
+    }
+
+    // Validate VAT number format
+    if (
+      invoice.buyer.vatNumber &&
+      !/^[A-Z]{2}[0-9A-Z]{2,12}$/.test(invoice.buyer.vatNumber)
+    ) {
+      errors["buyer.vatNumber"] = ["Invalid VAT number format"];
+    }
+  }
+
+  // Check line items
+  if (invoice.lines && invoice.lines.length > 0) {
+    invoice.lines.forEach((line, index) => {
+      if (!line.netPriceAmount) {
+        errors[`lines[${index}].netPriceAmount`] = [
+          "netPriceAmount is required",
+        ];
+      }
+      if (!line.vat || !line.vat.percentage) {
+        errors[`lines[${index}].vat.percentage`] = [
+          "VAT percentage is required",
+        ];
+      }
+    });
+  }
+
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+```
+
+### Delivery Errors
+
+If document delivery fails:
+
+```json
+{
+  "success": false,
+  "error": "Failed to deliver to recipient's Access Point"
+}
+```
+
+**Possible causes and solutions:**
+
+1. **Recipient's AP is unavailable**
+
+   - This is usually temporary; implement retry logic
+   - Check Peppol network status
+
+2. **Document size limits**
+   - Reduce attachment sizes or split into multiple documents
+   - Compress attachments before base64 encoding
+
+## Document Reception Issues
+
+### Missing Incoming Documents
+
+If expected documents don't appear in your [inbox](/reference/documents/get-inbox):
+
+**Possible causes and solutions:**
+
+1. **Documents not directed to your Peppol ID**
+
+   - Verify your Peppol ID is correctly communicated to senders
+
+2. **Documents processed but not visible**
+   - Check document filters
+   - Verify company ID selection is correct
+
+```javascript
+// List all documents across all companies
+const allDocs = await fetch(`https://app.recommand.eu/api/v1/documents`, {
+  headers: { Authorization: AUTH },
+}).then((r) => r.json());
+
+// Check documents one by one
+allDocs.documents.forEach((doc) => {
+  console.log(`Document ${doc.id} to ${doc.receiverId} from ${doc.senderId}`);
+});
+```
+
+3. **Webhook processing errors**
+   - Check webhook server logs
+   - Verify webhook endpoint is publicly accessible
+   - Test webhook endpoint manually
+
+## Webhook Challenges
+
+### Webhooks Not Receiving Events
+
+When [webhooks](/reference/webhooks) are not receiving events:
+
+**Possible causes and solutions:**
+
+1. **Webhook URL not accessible**
+
+   - Ensure your endpoint is publicly accessible
+   - Check firewall settings
+   - Verify HTTPS certificate is valid
+
+2. **Webhook server returning errors**
+
+   - Ensure your endpoint returns 200 OK quickly
+   - Check server logs for exceptions
+   - Implement proper error handling
+
+3. **Webhook registration issues**
+   - Verify webhook is registered with correct URL
+   - Check for typos in the URL
+
+### Testing Webhook Functionality
+
+```javascript
+// Express.js webhook endpoint with logging
+app.post("/peppol-webhook", (req, res) => {
+  // Log received payload for debugging
+  console.log("Webhook received at:", new Date().toISOString());
+  console.log("Headers:", req.headers);
+  console.log("Body:", req.body);
+
+  // Always respond with 200 OK quickly
+  res.status(200).send("Event received");
+
+  // Process event asynchronously
+  setTimeout(() => {
+    try {
+      // Process event logic
+      console.log("Processing event:", req.body.eventType);
+    } catch (error) {
+      console.error("Error processing webhook:", error);
+    }
+  }, 10);
+});
+```
+
+## Common Error Codes
+
+| Error Code | Description                 | Solution                                     |
+| ---------- | --------------------------- | -------------------------------------------- |
+| 400        | Bad Request - Invalid input | Check request payload for errors             |
+| 401        | Unauthorized                | Verify API key and secret                    |
+| 403        | Forbidden                   | Check permissions for the API key            |
+| 404        | Not Found                   | Verify endpoint path and resource IDs        |
+| 422        | Unprocessable Entity        | Fix validation errors in request payload     |
+| 429        | Too Many Requests           | Implement rate limiting and backoff strategy |
+| 500        | Server Error                | Contact support if persistent                |
+
+## Debugging Network Issues
+
+### Request-Response Logging
+
+Implement detailed logging to troubleshoot API requests:
+
+```javascript
+async function makeApiRequest(method, url, body = null) {
+  console.log(`${method} ${url}`);
+  if (body) console.log("Request Body:", body);
+
+  const options = {
+    method,
+    headers: {
+      Authorization:
+        "Basic " + Buffer.from("key_xxx:secret_xxx").toString("base64"),
+      "Content-Type": "application/json",
+    },
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  try {
+    const startTime = Date.now();
+    const response = await fetch(url, options);
+    const responseTime = Date.now() - startTime;
+
+    console.log(`Response Status: ${response.status} (${responseTime}ms)`);
+
+    const responseBody = await response.json();
+    console.log("Response Body:", responseBody);
+
+    return responseBody;
+  } catch (error) {
+    console.error("Request Failed:", error);
+    throw error;
+  }
+}
+```
+
+## API Response Time Issues
+
+If the API is responding slowly:
+
+1. **Check your network connection**
+   - Test latency to the API endpoint
+
+```bash
+ping app.recommand.eu
+```
+
+2. **Optimize request patterns**
+
+   - Batch requests where possible
+   - Implement caching for verification results
+   - Reduce payload sizes
+
+3. **Implement timeout handling**
+
+```javascript
+async function fetchWithTimeout(url, options, timeout = 10000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    if (error.name === "AbortError") {
+      throw new Error(`Request timed out after ${timeout}ms`);
+    }
+    throw error;
+  }
+}
+```
+
+## Document Content Issues
+
+If the document content is incorrect:
+
+1. **Preview document before sending**
+   - Consider implementing a preview functionality
+   - Validate totals and calculations client-side
+2. **Check decimal handling**
+   - Ensure monetary values use dot as decimal separator
+   - Format numbers with 2 decimal places as strings
+3. **Validate dates and identifiers**
+   - Use ISO date format (YYYY-MM-DD)
+   - Ensure invoice numbers follow a consistent pattern
+
+## Getting Support
+
+If you've tried the troubleshooting steps and still face issues:
+
+1. **Gather debugging information**
+   - API request and response details
+   - Error messages and codes
+   - Steps to reproduce the issue
+   - Timestamps of when issues occurred
+2. **Contact Recommand support**
+   - Email: support@recommand.eu
+   - Include your team ID and relevant document IDs
+   - Share the debugging information collected
+
+## Next Steps
+
+<Cards>
+  <Card href="/reference" title="Complete API Reference">
+    Full reference of all endpoints and models.
+  </Card>
+  <Card href="/docs/sending-invoices" title="Sending Invoices">
+    Create and send your first invoice.
+  </Card>
+  <Card href="/docs/verifying-recipients" title="Verifying Recipients">
+    Verify recipients and document support.
+  </Card>
+  <Card href="/docs/working-with-webhooks" title="Working with Webhooks">
+    Receive inbound events from the network.
+  </Card>
+  <Card href="/docs/authentication" title="Authentication">
+    Set up and test HTTP Basic authentication.
+  </Card>
+</Cards>

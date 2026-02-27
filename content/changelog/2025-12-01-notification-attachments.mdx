@@ -1,0 +1,15 @@
+---
+title: Optional PDF and JSON attachments in notification emails
+description: Allow notification email addresses to receive auto-generated PDF and document.json attachments for incoming and outgoing documents.
+date: 2025-12-01
+---
+
+We’ve made document notification emails more flexible with optional extra attachments.
+
+### What changed
+
+- **Per-address attachment settings**: For each company notification email address you can now choose whether to receive the auto-generated PDF and/or a `document.json` payload besides the Peppol document XML and its attachments.
+- **Incoming and outgoing coverage**: Settings are available separately for incoming and outgoing documents, so you can tailor which recipients get which attachments.
+- **Safer defaults**: Extra attachments are off by default and only added when explicitly enabled for a notification address.
+
+This makes it easier to plug notification emails into downstream workflows (for example archiving, accounting or review tools) without changing your core integration.

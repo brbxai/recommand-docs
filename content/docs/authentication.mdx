@@ -1,0 +1,347 @@
+---
+title: Authentication
+description: Learn how to authenticate with the Recommand Peppol API using Basic API keys, JWT bearer tokens, or OAuth2 with JWT assertion.
+---
+
+This guide explains how to authenticate with the Recommand Peppol API using our supported methods.
+
+<Callout type="warn" title="Keep your API secret safe">
+  Your API secret is shown only once in the dashboard. Store it securely. If you
+  lose it, generate a new key pair and revoke the old one.
+</Callout>
+
+## Authentication Methods
+
+The Recommand Peppol API supports multiple authentication methods for different use cases.
+
+## API Key Authentication
+
+### Basic API Keys
+
+Basic API keys use HTTP Basic Authentication. The API key ID is used as the username and the secret as the password.
+
+**Usage:**
+
+```http
+Authorization: Basic <base64(apiKeyId:secret)>
+```
+
+**Creating a Basic API Key:**
+
+1. Navigate to the API Keys section in the dashboard
+2. Create a new API key with type `basic`
+3. Store the returned `secret` securely (it's only shown once)
+
+**Examples**
+
+Use the tabs to view your preferred language.
+
+<Tabs items={['cURL', 'Node.js', 'Python', 'PHP']} groupId="language" persist>
+  <Tab value="cURL">
+
+```bash
+curl -X GET https://app.recommand.eu/api/v1/companies \
+  -u key_aBcDeFgHiJkLmNoPqRsT123456:secret_7uVwXyZ1234567890AbCdEfGhIj
+```
+
+  </Tab>
+  <Tab value="Node.js">
+
+```javascript
+const fetch = require("node-fetch");
+
+const API_KEY = "key_aBcDeFgHiJkLmNoPqRsT123456";
+const API_SECRET = "secret_7uVwXyZ1234567890AbCdEfGhIj";
+
+const credentials = Buffer.from(`${API_KEY}:${API_SECRET}`).toString("base64");
+
+async function fetchCompanies() {
+  const response = await fetch(`https://app.recommand.eu/api/v1/companies`, {
+    headers: {
+      Authorization: `Basic ${credentials}`,
+    },
+  });
+
+  return response.json();
+}
+```
+
+  </Tab>
+  <Tab value="Python">
+
+```python
+import requests
+import base64
+
+API_KEY = 'key_aBcDeFgHiJkLmNoPqRsT123456'
+API_SECRET = 'secret_7uVwXyZ1234567890AbCdEfGhIj'
+
+credentials = base64.b64encode(f"{API_KEY}:{API_SECRET}".encode()).decode()
+
+def fetch_companies():
+    response = requests.get(
+        f"https://app.recommand.eu/api/v1/companies",
+        headers={"Authorization": f"Basic {credentials}"}
+    )
+
+    return response.json()
+```
+
+  </Tab>
+  <Tab value="PHP">
+
+```php
+<?php
+$apiKey = 'key_aBcDeFgHiJkLmNoPqRsT123456';
+$apiSecret = 'secret_7uVwXyZ1234567890AbCdEfGhIj';
+
+$credentials = base64_encode($apiKey . ':' . $apiSecret);
+
+$ch = curl_init("https://app.recommand.eu/api/v1/companies");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Basic {$credentials}"
+]);
+
+$response = curl_exec($ch);
+$companies = json_decode($response, true);
+curl_close($ch);
+?>
+```
+
+  </Tab>
+</Tabs>
+
+### JWT API Keys
+
+JWT API keys use Bearer token authentication. The JWT token is provided directly in the Authorization header.
+
+**Usage:**
+
+```http
+Authorization: Bearer <jwt-token>
+```
+
+**Creating a JWT API Key:**
+
+1. Navigate to the API Keys section in the dashboard
+2. Create a new API key with type `jwt`
+3. Use the returned `jwt` token in your requests
+
+**Examples**
+
+Use the tabs to view your preferred language.
+
+<Tabs items={['cURL', 'Node.js', 'Python', 'PHP']} groupId="language" persist>
+  <Tab value="cURL">
+
+```bash
+curl -X GET https://app.recommand.eu/api/v1/companies \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+  </Tab>
+  <Tab value="Node.js">
+
+```javascript
+const fetch = require("node-fetch");
+
+const JWT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+
+async function fetchCompanies() {
+  const response = await fetch(`https://app.recommand.eu/api/v1/companies`, {
+    headers: {
+      Authorization: `Bearer ${JWT_TOKEN}`,
+    },
+  });
+
+  return response.json();
+}
+```
+
+  </Tab>
+  <Tab value="Python">
+
+```python
+import requests
+
+JWT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+
+def fetch_companies():
+    response = requests.get(
+        "https://app.recommand.eu/api/v1/companies",
+        headers={"Authorization": f"Bearer {JWT_TOKEN}"}
+    )
+
+    return response.json()
+```
+
+  </Tab>
+  <Tab value="PHP">
+
+```php
+<?php
+$jwtToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+
+$ch = curl_init("https://app.recommand.eu/api/v1/companies");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer {$jwtToken}"
+]);
+
+$response = curl_exec($ch);
+$companies = json_decode($response, true);
+curl_close($ch);
+?>
+```
+
+  </Tab>
+</Tabs>
+
+<Callout type="info" title="JWT expiration">
+  JWT API keys have expiration dates and must be refreshed when they expire.
+</Callout>
+
+## OAuth2 with JWT Assertion
+
+<Callout type="info" title="Enterprise only">
+  OAuth2 with JWT assertion is only available for enterprise customers on
+  request. Contact support to enable this feature for your team.
+</Callout>
+
+OAuth2 with JWT assertion allows you to authenticate using a client-signed JWT token. This method is suitable for server-to-server authentication where you control the private key used to sign the assertion.
+
+**Token Endpoint:**
+
+```
+POST /api/core/oauth2/token
+```
+
+**Request Parameters:**
+
+- `grant_type`: `urn:ietf:params:oauth:grant-type:jwt-bearer`
+- `assertion`: A JWT token signed with your private key (RS256 algorithm)
+
+**Request Format:**
+
+Parameters MUST be sent in the HTTP request body as `application/x-www-form-urlencoded` with this header:
+
+```http
+Content-Type: application/x-www-form-urlencoded
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "id": "key_xxx"
+}
+```
+
+Expiration of the access token is controlled by the expiration time of the JWT assertion.
+
+**Using the Access Token:**
+
+Use the returned `access_token` in subsequent API requests:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+**JWT Assertion Requirements:**
+
+- Algorithm: RS256
+- Claims:
+  - `iss`: Your team ID
+  - `sub`: Your team ID
+  - `team_id`: Your team ID
+  - `user_id`: Your user ID
+  - `exp`: Expiration time (Unix timestamp)
+  - `aud`: `https://app.recommand.eu/api/core/oauth2/token`
+
+**Example:**
+
+```bash
+# Request access token (OAuth 2.0 JWT Bearer Grant)
+curl -X POST "https://app.recommand.eu/api/core/oauth2/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer" \
+  --data-urlencode "assertion=eyJhbGciOiJSUzI1NiJ9..."
+
+# Use access token
+curl -H "Authorization: Bearer <access_token>" https://app.recommand.eu/api/v1/companies
+```
+
+<Callout type="warn" title="Note">
+  When OAuth2 with JWT assertion is enabled for a team, standard API key
+  creation is disabled for that team.
+</Callout>
+
+### Enabling OAuth2 with JWT Assertion
+
+To enable OAuth2 with JWT assertion for your team, contact support and provide the following information.
+Keep in mind this feature is only available for enterprise customers on request.
+
+- **Team ID**: Your team identifier (found in the API Keys section of the dashboard)
+- **JWKS (JSON Web Key Set)**: A JSON document containing your public key(s) in JWKS format. The public key(s) will be used to verify the JWT assertions you sign with your corresponding private key(s).
+
+The JWKS should follow the [RFC 7517](https://tools.ietf.org/html/rfc7517) specification and contain at least one RSA public key (for RS256 algorithm). The JWKS MUST only contain the public portion of the RSA keys. Example JWKS structure:
+
+```json
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "use": "sig",
+      "alg": "RS256",
+      "n": "base64url-encoded-modulus",
+      "e": "base64url-encoded-exponent",
+      "kid": "your-key-id"
+    }
+  ]
+}
+```
+
+Once enabled, standard API key creation will be disabled for your team, and you'll be able to use OAuth2 with JWT assertion for authentication.
+
+## Security Best Practices
+
+1. Environment variables: Store keys as environment variables or in a secure vault.
+2. Separate keys: Use different keys for development, testing, and production.
+3. Rotate regularly: Generate new keys periodically and revoke old ones.
+
+## Troubleshooting
+
+### Authentication errors
+
+If you receive a 401 Unauthorized response:
+
+- Verify your API key and secret are correct
+- Check if the key has been revoked
+- Ensure the Base64 encoding is correct
+- For JWT or OAuth2, ensure your token is not expired
+- Make sure the team ID you are using is correct, all API keys are team-specific
+
+## Next Steps
+
+<Cards>
+  <Card href="/docs/ubl-format-guide" title="UBL Format Guide">
+    Learn about the UBL document structure.
+  </Card>
+  <Card href="/docs/sending-invoices" title="Sending Invoices">
+    Learn how to create and send invoices.
+  </Card>
+  <Card
+    href="/reference/authentication"
+    title="API Authentication Reference"
+  >
+    Complete details on authentication in the API reference.
+  </Card>
+  <Card href="/docs/troubleshooting-guide" title="Troubleshooting Guide">
+    Solve common authentication issues.
+  </Card>
+</Cards>

@@ -1,0 +1,268 @@
+---
+title: Self‑Billing
+description: Send Peppol-compliant self-billing invoices and credit notes where the buyer creates the invoice on behalf of the supplier via the Recommand API.
+---
+
+This guide explains how to issue and send Peppol‑compliant self‑billing documents (invoices and credit notes) using the Recommand API.
+
+## What is self‑billing?
+
+Self‑billing is when the buyer (your company) creates the invoice on behalf of the supplier for goods or services received. The invoice is then sent to the supplier via Peppol. This is common in:
+
+- Long‑term supply agreements
+- High‑volume purchasing with automated pricing
+- Marketplace and platform settlements
+
+Important: You must have a prior agreement with the supplier to use self‑billing, and your self‑billing documents must meet local VAT and record‑keeping rules.
+
+## Prerequisites
+
+- A Recommand account with API access
+- A registered company for your team (the buyer/issuer)
+- The supplier’s Peppol address
+- Your API key and secret
+
+## Step‑by‑step
+
+<div className='fd-steps [&_h2]:fd-step'>
+
+## Verify the Supplier (Recipient)
+
+Self‑billing documents are sent to your supplier. Verify the supplier’s Peppol address before sending to avoid delivery failures.
+
+```javascript
+async function verifyRecipient(peppolAddress) {
+  const response = await fetch("https://app.recommand.eu/api/v1/verify", {
+    method: "POST",
+    headers: {
+      Authorization:
+        "Basic " +
+        Buffer.from("your_api_key:your_api_secret").toString("base64"),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ peppolAddress }),
+  });
+
+  const result = await response.json();
+  return result.isValid;
+}
+```
+
+## Create a Self‑Billing Invoice
+
+In self‑billing, the roles are:
+
+- buyer: your company (the issuer)
+- seller: your supplier (the recipient of the invoice and payment)
+
+### Prepare the invoice payload
+
+See generic models: [Party](/reference/sending/send-document), [PaymentMeans](/reference/sending/send-document), [Line](/reference/sending/send-document).
+
+```javascript
+const selfBillingInvoice = {
+  // Required identifiers
+  invoiceNumber: "SBI-2025-001",
+
+  // Recommended dates
+  issueDate: "2025-01-15",
+  dueDate: "2025-02-14",
+
+  // Buyer = your company (issuer) - optional, will be auto-filled if omitted
+  buyer: {
+    vatNumber: "BE0123456789",
+    name: "Your Company NV",
+    street: "Main Street 1",
+    city: "Brussels",
+    postalZone: "1000",
+    country: "BE",
+  },
+
+  // Seller = supplier you are invoicing on their behalf
+  seller: {
+    vatNumber: "BE0987654321",
+    name: "Supplier BV",
+    street: "Supplier Street 5",
+    city: "Antwerp",
+    postalZone: "2000",
+    country: "BE",
+  },
+
+  // How you'll pay the supplier
+  paymentMeans: [
+    {
+      paymentMethod: "credit_transfer",
+      reference: "SBI-2025-001",
+      iban: "BE99000123456789",
+    },
+  ],
+
+  // Lines for delivered goods/services
+  lines: [
+    {
+      name: "Monthly supply of widgets",
+      quantity: "100.00",
+      unitCode: "C62",
+      netPriceAmount: "5.00",
+      vat: {
+        category: "S",
+        percentage: "21.00",
+      },
+    },
+  ],
+
+  // Optional references
+  buyerReference: "PO-2025-1001",
+  purchaseOrderReference: "PO-2025-1001",
+  note: "Self-billing according to framework agreement 2025-01",
+};
+```
+
+### Send the self‑billing invoice
+
+Use the send endpoint with `documentType: "selfBillingInvoice"`:
+
+```javascript
+async function sendSelfBillingInvoice(companyId, supplierPeppolId, document) {
+  const token = Buffer.from("your_api_key:your_api_secret").toString("base64");
+
+  const response = await fetch(
+    `https://app.recommand.eu/api/v1/${companyId}/send`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Basic " + token,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipient: supplierPeppolId, // send to your supplier
+        documentType: "selfBillingInvoice",
+        document,
+      }),
+    }
+  );
+
+  return response.json();
+}
+```
+
+## Create a Self‑Billing Credit Note
+
+When you need to correct a previously issued self‑billing invoice, issue a self‑billing credit note and reference the original invoice.
+
+### Prepare the credit note payload
+
+```javascript
+const selfBillingCreditNote = {
+  creditNoteNumber: "SBCN-2025-001",
+  issueDate: "2025-01-20",
+  note: "Price correction for SBI-2025-001",
+
+  // Buyer = your company (issuer)
+  buyer: {
+    vatNumber: "BE0123456789",
+    name: "Your Company NV",
+    street: "Main Street 1",
+    city: "Brussels",
+    postalZone: "1000",
+    country: "BE",
+  },
+
+  // Seller = supplier
+  seller: {
+    vatNumber: "BE0987654321",
+    name: "Supplier BV",
+    street: "Supplier Street 5",
+    city: "Antwerp",
+    postalZone: "2000",
+    country: "BE",
+  },
+
+  // Reference the original self-billing invoice
+  invoiceReferences: [{ id: "SBI-2025-001" }],
+
+  // Lines to credit
+  lines: [
+    {
+      name: "Price correction",
+      quantity: "100.00",
+      unitCode: "C62",
+      netPriceAmount: "-0.50", // credit 0.50 per unit
+      vat: { percentage: "21.00" },
+    },
+  ],
+};
+```
+
+### Send the self‑billing credit note
+
+Use the send endpoint with `documentType: "selfBillingCreditNote"`:
+
+```javascript
+async function sendSelfBillingCreditNote(
+  companyId,
+  supplierPeppolId,
+  document
+) {
+  const token = Buffer.from("your_api_key:your_api_secret").toString("base64");
+
+  const response = await fetch(
+    `https://app.recommand.eu/api/v1/${companyId}/send`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Basic " + token,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipient: supplierPeppolId,
+        documentType: "selfBillingCreditNote",
+        document,
+      }),
+    }
+  );
+
+  return response.json();
+}
+```
+
+</div>
+
+## Field notes and tips
+
+- Issue and due dates: If omitted, the API will default sensible values (issue date = today; due date = +1 month).
+- Totals and VAT: Totals are computed from lines if not supplied. You can provide `totals` and `vat` objects when you need explicit control.
+- Attachments: Add supporting documents via `attachments` (see [Attachment](/reference/sending/send-document)).
+- Payment details: Include the supplier’s bank information in `paymentMeans` to streamline settlement.
+- References: Use `buyerReference`, `purchaseOrderReference`, and `despatchReference` when applicable for matching.
+
+## Best practices
+
+1. Have a written self‑billing agreement with each supplier and store its reference on the document.
+2. Verify each supplier’s Peppol address before sending.
+3. Keep consistent numbering series for self‑billing invoices and credit notes (e.g., `SBI-…`, `SBCN-…`).
+4. Always reference the original invoice in credit notes (`invoiceReferences`).
+5. Test end‑to‑end in a playground team before going live.
+
+## Next steps
+
+<Cards>
+  <Card href="/docs/verifying-recipients" title="Verifying Recipients">
+    Validate suppliers and supported document types.
+  </Card>
+  <Card href="/docs/suppliers-and-labels" title="Suppliers and Labels">
+    Organize supplier data and workflows.
+  </Card>
+  <Card href="/docs/sending-invoices" title="Sending Invoices">
+    Learn standard invoice flows.
+  </Card>
+  <Card href="/docs/sending-credit-notes" title="Sending Credit Notes">
+    Correct issued documents when needed.
+  </Card>
+  <Card
+    href="/reference/sending/send-document"
+    title="Send Endpoint"
+  >
+    Full parameters and response schema.
+  </Card>
+</Cards>

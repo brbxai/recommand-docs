@@ -1,0 +1,26 @@
+{
+  "title": "Documentation",
+  "defaultOpen": true,
+  "pages": [
+    "---Introduction---",
+    "index",
+    "authentication",
+    "---How-to guides---",
+    "managing-companies",
+    "verifying-recipients",
+    "sending-invoices",
+    "sending-credit-notes",
+    "self-billing",
+    "discounts-and-surcharges",
+    "receiving-documents",
+    "email-delivery-and-notifications",
+    "working-with-webhooks",
+    "suppliers-and-labels",
+    "---Peppol Basics---",
+    "ubl-format-guide",
+    "peppol-network-basics",
+    "peppol-standards-and-compliance",
+    "---Troubleshooting---",
+    "troubleshooting-guide"
+  ]
+}

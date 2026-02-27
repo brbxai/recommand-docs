@@ -1,0 +1,15 @@
+---
+title: Global VAT exemption reasons
+description: Added support for providing VAT exemption reasons at document level, used when calculating VAT subtotals.
+date: 2025-12-07
+---
+
+We’ve improved how VAT exemption reasons are modeled and validated.
+
+### What changed
+
+- **Document-level exemption info**: The send invoice and credit note schemas now support a `vat` object that can either contain full VAT subtotals or just a global `exemptionReason` / `exemptionReasonCode`.
+- **Automatic VAT calculation**: When only the exemption fields are provided, Recommand calculates VAT subtotals from the lines and applies the same exemption reason to all exempt categories.
+- **Validation-aware behaviour**: For documents with validation enforcement enabled, required exemption reasons are checked before generating UBL, so missing reasons surface as clear errors instead of only appearing in downstream validators.
+
+This makes it easier to send compliant VAT-exempt invoices and credit notes without having to manually build detailed VAT subtotal structures.

@@ -1,0 +1,298 @@
+---
+title: Email Delivery and Notifications
+description: Send documents via email alongside or instead of Peppol, and configure email notifications for incoming and outgoing documents.
+---
+
+This guide covers the two ways email is used in Recommand: delivering documents to recipients via email, and sending notifications about document activity to your team.
+
+## Email Delivery
+
+Recommand uses a single API endpoint for sending all your documents — whether the recipient is on Peppol or not. You can include email delivery alongside Peppol, as a fallback when Peppol fails, or as the sole delivery method for recipients who aren't on the Peppol network.
+
+Common use cases:
+
+- **B2C customers** who aren't on the Peppol network
+- **International recipients** outside countries with Peppol mandates
+- **Fallback delivery** when Peppol transmission fails
+- **Additional delivery** when you want both Peppol and email
+
+### How It Works
+
+Add the `email` field to your [send document](/reference/sending/send-document) request:
+
+```javascript
+const response = await fetch(
+  "https://app.recommand.eu/api/v1/{companyId}/send",
+  {
+    method: "POST",
+    headers: {
+      Authorization:
+        "Basic " +
+        Buffer.from("your_api_key:your_api_secret").toString("base64"),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      recipient: "0208:987654321",
+      documentType: "invoice",
+      document: {
+        // ... your invoice data
+      },
+      email: {
+        when: "always",
+        to: ["customer@example.com"],
+      },
+    }),
+  },
+);
+```
+
+### Email Options
+
+| Field            | Description                                                                                                            | Default                                      |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `email.when`     | `"always"` — send email regardless of Peppol result. `"on_peppol_failure"` — only send email if Peppol delivery fails. | `"on_peppol_failure"`                        |
+| `email.to`       | Array of recipient email addresses.                                                                                    | Required                                     |
+| `email.subject`  | Custom email subject line.                                                                                             | Auto-generated from document type and number |
+| `email.htmlBody` | Custom HTML body for the email.                                                                                        | Auto-generated                               |
+
+### Sending Without a Peppol Recipient
+
+For customers who aren't on the Peppol network, you can set `recipient` to `null` to send exclusively via email. This works with invoices, credit notes, self-billing invoices, and self-billing credit notes.
+
+```javascript
+{
+  recipient: null,
+  documentType: "invoice",
+  document: {
+    // ... your invoice data
+  },
+  email: {
+    to: ["customer@example.com"],
+  },
+  pdfGeneration: {
+    enabled: true,
+  },
+}
+```
+
+When `recipient` is `null`, email becomes the primary delivery method and `email.to` is required. The `when` field is ignored since there is no Peppol delivery to fall back from.
+
+Since these emails are not sent over the Peppol network, the PDF attachment effectively becomes the document your recipient receives. You can either let Recommand generate a PDF from your document data, or attach your own custom PDF — see [PDF Attachments](#pdf-attachments) below.
+
+This means you can use a single API endpoint and document format for all your customers — Recommand handles the delivery method based on the recipient.
+
+### PDF Attachments
+
+When sending documents via email, you can attach a PDF in two ways:
+
+**Auto-generated PDF** — Recommand renders a PDF from your document data:
+
+```javascript
+{
+  pdfGeneration: {
+    enabled: true,
+    filename: "INV-2025-001.pdf", // optional custom filename
+  },
+}
+```
+
+**Custom PDF** — Include your own PDF via the document's `attachments` field. This is useful if you have a branded invoice template or generate PDFs in your own system. See the [sending invoices guide](/docs/sending-invoices) for details on attachments.
+
+When sending via Peppol, emails also include the UBL XML document as an attachment.
+
+### Response
+
+The send document response tells you how the document was delivered:
+
+```json
+{
+  "success": true,
+  "id": "doc_xxx",
+  "sentOverPeppol": true,
+  "sentOverEmail": true,
+  "emailRecipients": ["customer@example.com"]
+}
+```
+
+Each email sent counts toward your document quota.
+
+## Email Notifications
+
+Email notifications alert you (or your systems) when documents are sent or received. They are configured per company and can be set up from the [dashboard](https://app.recommand.eu) or via the API.
+
+### What Notifications Include
+
+Every notification email includes:
+
+- A summary of the document (type, number, amount, sender or recipient)
+- The original UBL XML as an attachment
+- Any attachments embedded in the original document
+
+You can optionally include:
+
+- **Auto-generated PDF** — a visual PDF rendering of the UBL XML document, generated by Recommand
+- **Document JSON** — the structured JSON representation with metadata
+
+### Setting Up Notifications
+
+#### Via the Dashboard
+
+In the dashboard, navigate to your company and open the notification email settings. From there you can add email addresses and configure which notifications each address receives.
+
+#### Via the API
+
+Use the [notification email address endpoints](/reference/company-notification-email-addresses) to manage notification emails programmatically.
+
+Create a notification email address:
+
+```javascript
+const response = await fetch(
+  "https://app.recommand.eu/api/v1/{companyId}/notification-email-addresses",
+  {
+    method: "POST",
+    headers: {
+      Authorization:
+        "Basic " +
+        Buffer.from("your_api_key:your_api_secret").toString("base64"),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: "accounting@yourcompany.com",
+      notifyIncoming: true,
+      notifyOutgoing: false,
+      includeAutoGeneratedPdfIncoming: true,
+      includeDocumentJsonIncoming: false,
+    }),
+  },
+);
+```
+
+### Configuration Options
+
+Each email address can be configured independently:
+
+| Setting                           | Description                                                       |
+| --------------------------------- | ----------------------------------------------------------------- |
+| `notifyIncoming`                  | Receive notifications when documents are received                 |
+| `notifyOutgoing`                  | Receive notifications when documents are sent                     |
+| `includeAutoGeneratedPdfIncoming` | Attach a PDF rendering of the XML document for incoming documents |
+| `includeAutoGeneratedPdfOutgoing` | Attach a PDF rendering of the XML document for outgoing documents |
+| `includeDocumentJsonIncoming`     | Attach the structured JSON for incoming documents                 |
+| `includeDocumentJsonOutgoing`     | Attach the structured JSON for outgoing documents                 |
+
+At least one of `notifyIncoming` or `notifyOutgoing` must be enabled. You can add multiple email addresses per company, each with different settings.
+
+### Common Setups
+
+**Notify your team about incoming invoices:**
+
+```json
+{
+  "email": "finance@yourcompany.com",
+  "notifyIncoming": true,
+  "notifyOutgoing": false,
+  "includeAutoGeneratedPdfIncoming": true
+}
+```
+
+**Forward documents to accounting software:**
+
+Many accounting tools offer an email inbox that automatically processes incoming UBL/XML documents. Point a notification email at that inbox and documents flow from Peppol into your accounting software automatically — no code required. See the setup guides for [Exact Online](/integrations/exact-online), [Yuki](/integrations/yuki), and [ClearFacts](/integrations/clearfacts).
+
+```json
+{
+  "email": "inbox@accounting-tool.com",
+  "notifyIncoming": true,
+  "notifyOutgoing": false,
+  "includeAutoGeneratedPdfIncoming": false,
+  "includeDocumentJsonIncoming": false
+}
+```
+
+The XML is always attached, which is all most accounting tools need. See the [integrations page](/integrations) for all available setup guides.
+
+**Keep a copy of all outgoing documents:**
+
+```json
+{
+  "email": "archive@yourcompany.com",
+  "notifyIncoming": false,
+  "notifyOutgoing": true,
+  "includeAutoGeneratedPdfOutgoing": true,
+  "includeDocumentJsonOutgoing": true
+}
+```
+
+### Managing Notification Emails
+
+You can list, update, and delete notification email addresses through the API:
+
+```javascript
+// List all notification emails for a company
+const list = await fetch(
+  "https://app.recommand.eu/api/v1/{companyId}/notification-email-addresses",
+  {
+    headers: {
+      Authorization:
+        "Basic " +
+        Buffer.from("your_api_key:your_api_secret").toString("base64"),
+    },
+  },
+);
+
+// Update settings
+const update = await fetch(
+  "https://app.recommand.eu/api/v1/{companyId}/notification-email-addresses/{addressId}",
+  {
+    method: "PUT",
+    headers: {
+      Authorization:
+        "Basic " +
+        Buffer.from("your_api_key:your_api_secret").toString("base64"),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email: "accounting@yourcompany.com",
+      notifyIncoming: true,
+      notifyOutgoing: true,
+      includeAutoGeneratedPdfIncoming: true,
+      includeAutoGeneratedPdfOutgoing: false,
+      includeDocumentJsonIncoming: false,
+      includeDocumentJsonOutgoing: false,
+    }),
+  },
+);
+
+// Delete a notification email
+const remove = await fetch(
+  "https://app.recommand.eu/api/v1/{companyId}/notification-email-addresses/{addressId}",
+  {
+    method: "DELETE",
+    headers: {
+      Authorization:
+        "Basic " +
+        Buffer.from("your_api_key:your_api_secret").toString("base64"),
+    },
+  },
+);
+```
+
+## Next Steps
+
+<Cards>
+  <Card href="/docs/sending-invoices" title="Sending Invoices">
+    Full guide on creating and sending invoices.
+  </Card>
+  <Card href="/docs/receiving-documents" title="Receiving Documents">
+    Process incoming documents using webhooks or polling.
+  </Card>
+  <Card href="/integrations" title="Integrations">
+    Connect Recommand with your accounting software and other tools.
+  </Card>
+  <Card
+    href="/reference/company-notification-email-addresses"
+    title="Notification Emails API Reference"
+  >
+    Complete API reference for notification email endpoints.
+  </Card>
+</Cards>

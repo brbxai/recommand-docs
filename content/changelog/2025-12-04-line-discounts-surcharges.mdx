@@ -1,0 +1,15 @@
+---
+title: Line-level discounts and surcharges
+description: Added support for modeling Peppol line discounts and surcharges, including correct UBL mapping and totals.
+date: 2025-12-04
+---
+
+We’ve improved how individual invoice and credit note lines can express discounts and surcharges.
+
+### What changed
+
+- **Line discounts & surcharges**: Document lines can now include structured `discounts` and `surcharges` with reason codes/text and amounts, following Peppol codelists.
+- **Parsing, XML & totals**: These values round‑trip through the UBL XML (via `cac:AllowanceCharge`) and are taken into account when calculating line and document totals.
+- **PDF preview**: The billing document template now shows per‑line discounts (in red) and surcharges (in green) in the rendered preview.
+
+This makes line pricing in your Peppol documents more accurate and transparent, especially when you use discounts or extra charges per line.

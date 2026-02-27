@@ -1,0 +1,16 @@
+---
+title: API path updated to /api/v1
+description: Standardized the public Peppol API under the /api/v1 path while keeping /api/peppol compatible.
+date: 2025-11-25
+---
+
+We updated the base path for the Recommand Peppol API from `peppol` to `v1`.
+
+### What changed
+
+- All API endpoints now use the `/api/v1/...` path.
+
+### Backwards compatibility
+
+- Existing calls to `/api/peppol/...` continue to work.
+- We recommend migrating to `/api/v1/...` for new and updated integrations to stay aligned with the current documentation.

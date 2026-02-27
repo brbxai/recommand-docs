@@ -1,0 +1,35 @@
+---
+title: Improved document validation
+description: Added Peppol document validation for transmitted documents, with per‑company enforcement and detailed error reporting in the dashboard.
+date: 2025-12-01
+---
+
+We’ve added first‑class document validation to help you catch Peppol compliance issues _before_ sending documents.
+
+### What changed
+
+- **New validation service**: All transmitted documents are now validated via our dedicated validation service, using EN16931 and Peppol BIS 3.0 rules.
+- **Stored validation results**: Validation output is stored alongside each transmitted document so you can review issues later.
+- **Outgoing validation enforcement**: Companies now have a new setting `isOutgoingDocumentValidationEnforced` that, when enabled, blocks sending documents that fail validation with clear error messages.
+- **Incoming documents**: Incoming documents are also validated and their results are stored on the transmitted document record.
+
+### How validation works
+
+- **Automatic XML validation**: When you send or receive a document, its XML is passed to our validation service.
+- **Result handling**:
+  - If validation succeeds, the document continues to be processed and sent as before.
+  - If validation fails or an error occurs _and_ enforcement is enabled for the company, the API returns a `400` response with a structured list of rule codes and human‑readable error messages grouped by field.
+- **Per‑company control**:
+  - New companies have validation enforcement enabled by default via `isOutgoingDocumentValidationEnforced`.
+  - Existing companies can enable or disable this behaviour in the company settings UI.
+
+### Dashboard improvements
+
+- **Transmitted document details**:
+  - A new “Document Validation Issues” panel surfaces validation results whenever a document is not marked as `valid`.
+  - You can inspect the full validation payload, parsed JSON structure, and original XML for each transmission.
+- **Document list indicators**:
+  - The transmitted documents table now shows a visual indicator next to the document type when validation issues are present.
+  - Hovering the indicator opens a popover with the most important validation errors for quick inspection.
+
+These improvements make it easier to keep your Peppol traffic compliant and to diagnose issues quickly when something goes wrong.

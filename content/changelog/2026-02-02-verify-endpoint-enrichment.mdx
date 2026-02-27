@@ -1,0 +1,19 @@
+---
+title: Verify endpoint enrichment
+description: The verify recipient endpoint now returns supported document types with optional endpoint details and business card information.
+date: 2026-02-02
+---
+
+The **verify recipient endpoint** has been extended with richer data about Peppol participants, including which document types they support, their endpoint details, and business card information.
+
+### What changed
+
+- **Supported documents**: The verify response now includes a `supportedDocuments` array with human-readable names and full Peppol document type identifiers for each document type the participant supports
+- **Endpoint details**: Set `includeEndpointDetails: true` to fetch service provider, endpoint URL, transport profile, technical contact, and certificate expiry for each supported document type
+- **Business card**: Set `includeBusinessCard: true` to retrieve the company name and country code from the SMP business card
+- **Verify document support**: The verify document support endpoint now also returns endpoint details (service provider, endpoint URL, transport profile, technical contact, certificate expiry)
+
+### Why this matters
+
+- **Richer participant insights**: Understand exactly which document types a recipient supports and how they are connected to the Peppol network, all from a single API call
+- **Backwards compatible**: Existing integrations continue to work without changes. The new fields are additive

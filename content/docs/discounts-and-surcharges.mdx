@@ -1,0 +1,179 @@
+---
+title: Discounts & Surcharges
+description: Add document-level and line-level discounts or surcharges to invoices, credit notes, and self-billing documents.
+---
+
+This guide explains how to apply discounts and surcharges to Peppol documents sent through the [Recommand JSON API](/reference/sending/send-document). Discounts and surcharges work identically across all document types: invoices, credit notes, self-billing invoices, and self-billing credit notes.
+
+## Overview
+
+The Peppol standard supports two levels of discounts and surcharges:
+
+- **Document-level** — applied to the entire document (e.g. a 5% volume discount on the total)
+- **Line-level** — applied to a specific line item (e.g. a promotional discount on one product)
+
+Both levels support multiple entries, meaning you can add several discounts and surcharges to a single document or line.
+
+## Document-Level Discounts & Surcharges
+
+Document-level discounts and surcharges are defined in the top-level `discounts` and `surcharges` arrays of your document payload. Each entry requires its own VAT information, since different discounts may fall under different tax rates.
+
+### Structure
+
+| Field        | Required | Description                                                                      | Example       |
+| ------------ | -------- | -------------------------------------------------------------------------------- | ------------- |
+| `reasonCode` | One of*  | Reason code — [UNCL5189](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL5189/) for discounts, [UNCL7161](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL7161/) for surcharges | `"95"`        |
+| `reason`     | One of*  | Free-text reason                                                                 | `"Discount"`  |
+| `amount`     | Yes      | Amount as a decimal string                                                       | `"10.00"`     |
+| `vat`        | Yes      | VAT category and percentage — see [VatInfo model](/reference/sending/send-document) | See below     |
+
+\* At least one of `reasonCode` or `reason` must be provided. You can provide both.
+
+### Example
+
+```json
+{
+  "invoiceNumber": "INV-TEST-001",
+  "issueDate": "2025-01-15",
+  "dueDate": "2025-02-14",
+  "buyer": {
+    "vatNumber": "BE0123456789",
+    "name": "Customer NV",
+    "street": "Main Street 1",
+    "city": "Brussels",
+    "postalZone": "1000",
+    "country": "BE"
+  },
+  "paymentMeans": [{ "iban": "BE68539007547034" }],
+  "lines": [
+    {
+      "name": "Consulting Services",
+      "quantity": "10.00",
+      "unitCode": "HUR",
+      "netPriceAmount": "100.00",
+      "vat": { "percentage": "21.00" }
+    }
+  ],
+  "discounts": [
+    {
+      "reasonCode": "95",
+      "reason": "Volume discount",
+      "amount": "50.00",
+      "vat": {
+        "category": "S",
+        "percentage": "21.00"
+      }
+    }
+  ],
+  "surcharges": [
+    {
+      "reasonCode": "FC",
+      "reason": "Freight services",
+      "amount": "25.00",
+      "vat": {
+        "category": "S",
+        "percentage": "21.00"
+      }
+    }
+  ]
+}
+```
+
+In this example, the invoice has a line total of 1000.00 EUR (10 x 100.00), minus a 50.00 discount, plus a 25.00 surcharge, for a tax-exclusive total of 975.00 EUR.
+
+## Line-Level Discounts & Surcharges
+
+Line-level discounts and surcharges are defined in the `discounts` and `surcharges` arrays on each line item. Unlike document-level entries, line-level entries do **not** include VAT information - they inherit the VAT category from the line they belong to.
+
+<Callout type="warn" title="Important">
+  Line discounts are **not** informational — they actively affect the line net amount. Set `netPriceAmount` to the unit price **before** any discounts. The API subtracts the discount `amount` from `quantity × netPriceAmount` to calculate the line `netAmount`.
+</Callout>
+
+### Structure
+
+| Field        | Required | Description                                                                   | Example      |
+| ------------ | -------- | ----------------------------------------------------------------------------- | ------------ |
+| `reasonCode` | One of*  | Reason code — [UNCL5189](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL5189/) for discounts, [UNCL7161](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL7161/) for surcharges | `"95"`       |
+| `reason`     | One of*  | Free-text reason                                                              | `"Promo"`    |
+| `amount`     | Yes      | Amount as a decimal string                                                    | `"5.00"`     |
+
+\* At least one of `reasonCode` or `reason` must be provided.
+
+### Example
+
+```json
+{
+  "invoiceNumber": "INV-TEST-002",
+  "issueDate": "2025-01-15",
+  "buyer": {
+    "vatNumber": "BE0123456789",
+    "name": "Customer NV",
+    "street": "Main Street 1",
+    "city": "Brussels",
+    "postalZone": "1000",
+    "country": "BE"
+  },
+  "paymentMeans": [{ "iban": "BE68539007547034" }],
+  "lines": [
+    {
+      "name": "Product A",
+      "quantity": "5.00",
+      "netPriceAmount": "40.00",
+      "vat": { "percentage": "21.00" },
+      "discounts": [
+        {
+          "reason": "Promotional discount",
+          "amount": "10.00"
+        }
+      ]
+    },
+    {
+      "name": "Product B",
+      "quantity": "2.00",
+      "netPriceAmount": "60.00",
+      "vat": { "percentage": "6.00" },
+      "surcharges": [
+        {
+          "reason": "Special packaging",
+          "amount": "5.00"
+        }
+      ]
+    }
+  ]
+}
+```
+
+In this example:
+
+- **Product A**: (5 x 40.00) - 10.00 discount = **190.00** net
+- **Product B**: (2 x 60.00) + 5.00 surcharge = **125.00** net
+
+## How Totals Are Calculated
+
+Understanding how discounts and surcharges affect totals is important for validation. The API will calculate totals automatically if you omit them, but here is how it works:
+
+### Line Net Amount
+
+```
+lineNetAmount = (quantity x netPriceAmount) - line discounts + line surcharges
+```
+
+### Document Totals
+
+```
+linesAmount = sum of all lineNetAmounts
+discountAmount = sum of all document-level discounts
+surchargeAmount = sum of all document-level surcharges
+
+taxExclusiveAmount  = linesAmount - discountAmount + surchargeAmount
+taxInclusiveAmount  = taxExclusiveAmount + totalVAT
+```
+
+### VAT Calculation
+
+Each document-level discount or surcharge contributes to the VAT subtotal for its own VAT category and percentage:
+
+- Discounts **reduce** the taxable amount for their VAT category
+- Surcharges **increase** the taxable amount for their VAT category
+
+Line-level discounts and surcharges are factored into their line's net amount, which contributes to the line's VAT category subtotal.

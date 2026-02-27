@@ -1,0 +1,311 @@
+---
+title: Understanding Peppol UBL Format
+description: Understand the UBL (Universal Business Language) XML format used in Peppol e-invoicing, including document structure, EN16931 compliance, and field mapping.
+---
+
+This guide explains the Universal Business Language (UBL) format used in [Peppol document exchange](/reference).
+
+## What is UBL?
+
+UBL (Universal Business Language) is an XML-based standard for electronic business documents. In the Peppol network, UBL serves as the foundation for standardized document exchange between businesses across borders and systems.
+
+## UBL in Peppol
+
+Peppol uses specific UBL document formats defined by the EN16931 European standard for electronic invoicing. Documents sent through Peppol must comply with these standards to ensure interoperability across the network.
+
+The most common UBL document type in Peppol is:
+
+```text
+urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1
+```
+
+This identifier specifies that the document is:
+
+- A UBL Invoice document (version 2)
+- Compliant with EN16931:2017 standard
+- Following Peppol BIS Billing 3.0 specifications
+- Using syntax version 2.1
+
+## Document Structure
+
+A UBL invoice in Peppol contains several key sections:
+
+1. Header Information
+
+Contains basic invoice details like number, dates, and references:
+
+```xml
+<cbc:ID>INV-2025-001</cbc:ID>
+<cbc:IssueDate>2024-05-15</cbc:IssueDate>
+<cbc:DueDate>2024-06-15</cbc:DueDate>
+<cbc:Note>Thank you for your business</cbc:Note>
+<cbc:BuyerReference>PO-2024-001</cbc:BuyerReference>
+```
+
+2. Parties
+
+Defines seller and buyer information:
+
+```xml
+<cac:AccountingSupplierParty>
+  <cac:Party>
+    <cac:PartyLegalEntity>
+      <cbc:RegistrationName>Your Company</cbc:RegistrationName>
+      <cbc:CompanyID schemeID="0208">0123456789</cbc:CompanyID>
+    </cac:PartyLegalEntity>
+    <cac:PostalAddress>
+      <cbc:StreetName>Your Street 1</cbc:StreetName>
+      <cbc:CityName>Brussels</cbc:CityName>
+      <cbc:PostalZone>1000</cbc:PostalZone>
+      <cac:Country>
+        <cbc:IdentificationCode>BE</cbc:IdentificationCode>
+      </cac:Country>
+    </cac:PostalAddress>
+  </cac:Party>
+</cac:AccountingSupplierParty>
+```
+
+3. Payment Information
+
+Contains payment terms and bank details:
+
+```xml
+<cac:PaymentMeans>
+  <cbc:PaymentMeansCode>30</cbc:PaymentMeansCode>
+  <cbc:PaymentID>INV-2025-001</cbc:PaymentID>
+  <cac:PayeeFinancialAccount>
+    <cbc:ID>BE1234567890</cbc:ID>
+  </cac:PayeeFinancialAccount>
+</cac:PaymentMeans>
+```
+
+4. Invoice lines
+
+Each product or service line item:
+
+```xml
+<cac:InvoiceLine>
+  <cbc:ID>1</cbc:ID>
+  <cbc:InvoicedQuantity unitCode="HUR">10.00</cbc:InvoicedQuantity>
+  <cbc:LineExtensionAmount currencyID="EUR">1000.00</cbc:LineExtensionAmount>
+  <cac:Item>
+    <cbc:Name>Consulting Services</cbc:Name>
+    <cbc:Description>Professional consulting services</cbc:Description>
+    <cac:SellersItemIdentification>
+      <cbc:ID>CS-001</cbc:ID>
+    </cac:SellersItemIdentification>
+    <cac:ClassifiedTaxCategory>
+      <cbc:ID>S</cbc:ID>
+      <cbc:Percent>21.00</cbc:Percent>
+      <cac:TaxScheme>
+        <cbc:ID>VAT</cbc:ID>
+      </cac:TaxScheme>
+    </cac:ClassifiedTaxCategory>
+  </cac:Item>
+  <cac:Price>
+    <cbc:PriceAmount currencyID="EUR">100.00</cbc:PriceAmount>
+  </cac:Price>
+</cac:InvoiceLine>
+```
+
+5. Tax Information
+
+VAT breakdowns and totals:
+
+```xml
+<cac:TaxTotal>
+  <cbc:TaxAmount currencyID="EUR">210.00</cbc:TaxAmount>
+  <cac:TaxSubtotal>
+    <cbc:TaxableAmount currencyID="EUR">1000.00</cbc:TaxableAmount>
+    <cbc:TaxAmount currencyID="EUR">210.00</cbc:TaxAmount>
+    <cac:TaxCategory>
+      <cbc:ID>S</cbc:ID>
+      <cbc:Percent>21.00</cbc:Percent>
+      <cac:TaxScheme>
+        <cbc:ID>VAT</cbc:ID>
+      </cac:TaxScheme>
+    </cac:TaxCategory>
+  </cac:TaxSubtotal>
+</cac:TaxTotal>
+```
+
+6. Monetary Totals
+
+Summary of invoice amounts:
+
+```xml
+<cac:LegalMonetaryTotal>
+  <cbc:LineExtensionAmount currencyID="EUR">1000.00</cbc:LineExtensionAmount>
+  <cbc:TaxExclusiveAmount currencyID="EUR">1000.00</cbc:TaxExclusiveAmount>
+  <cbc:TaxInclusiveAmount currencyID="EUR">1210.00</cbc:TaxInclusiveAmount>
+  <cbc:PayableAmount currencyID="EUR">1210.00</cbc:PayableAmount>
+</cac:LegalMonetaryTotal>
+```
+
+## VAT Categories
+
+Peppol UBL supports various VAT categories, including:
+
+| Code | Description                                                       |
+| ---- | ----------------------------------------------------------------- |
+| S    | Standard rate                                                     |
+| Z    | Zero rated goods                                                  |
+| E    | Exempt from tax                                                   |
+| AE   | VAT Reverse Charge                                                |
+| K    | VAT exempt for EEA intra-community supply                         |
+| G    | Free export item, VAT not charged                                 |
+| O    | Services outside scope of tax                                     |
+| L    | Canary Islands general indirect tax                               |
+| M    | Tax for production, services and importation in Ceuta and Melilla |
+| B    | Transferred (VAT), In Italy                                       |
+
+When sending regular invoices, you should most often use the `S` category.
+When sending an invoice to another EU country, use the `AE` category for VAT Reverse Charge.
+In those cases, it is still recommended to include a note in the invoice explaining that the VAT Reverse Charge applies.
+
+## Unit Codes
+
+Common unit codes in Peppol UBL include:
+
+| Code | Description   |
+| ---- | ------------- |
+| C62  | One (unit)    |
+| DAY  | Day           |
+| HUR  | Hour          |
+| MIN  | Minute        |
+| MON  | Month         |
+| WEE  | Week          |
+| KGM  | Kilogram      |
+| LTR  | Liter         |
+| MTR  | Meter         |
+| KWH  | Kilowatt hour |
+
+The complete list of unit codes can be found in the [UN/ECE Recommendation 20](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNECERec20/).
+
+## Document Types
+
+Common document types in Peppol:
+
+| Type           | Description                       |
+| -------------- | --------------------------------- |
+| Invoice        | Standard invoice                  |
+| CreditNote     | Credit note correcting an invoice |
+| Order          | Purchase order                    |
+| OrderResponse  | Response to a purchase order      |
+| Catalogue      | Product catalogue                 |
+| DespatchAdvice | Shipping notice                   |
+
+## Attachments
+
+UBL documents can include attachments embedded as base64-encoded content:
+
+```xml
+<cac:AdditionalDocumentReference>
+  <cbc:ID>ATT-001</cbc:ID>
+  <cbc:DocumentType>Commercial invoice</cbc:DocumentType>
+  <cac:Attachment>
+    <cbc:EmbeddedDocumentBinaryObject mimeCode="application/pdf" filename="invoice.pdf">
+      <!-- Base64 encoded content -->
+    </cbc:EmbeddedDocumentBinaryObject>
+  </cac:Attachment>
+</cac:AdditionalDocumentReference>
+```
+
+## Validation Rules
+
+Peppol documents must pass several validation layers:
+
+1. XML Schema Validation: Basic XML structure validation
+2. Schematron Validation: Business rule validation specific to document type
+3. Peppol Validation Artifacts: Additional Peppol-specific rules
+
+The Recommand API handles these validations automatically when sending documents.
+
+## Simplified Approach with Recommand
+
+Instead of constructing complex UBL XML manually, you can use Recommand's simplified JSON structure, which is automatically converted to valid UBL.
+Furthermore, if not provided, Recommand will automatically calculate any necessary totals.
+
+```javascript
+// Simple JSON structure
+const invoice = {
+  invoiceNumber: "INV-2025-001",
+  issueDate: "2024-05-15",
+  buyer: {
+    vatNumber: "BE0987654321",
+    name: "Customer Company",
+    // ...
+  },
+  // ...
+};
+
+// Send to Recommand API which converts to proper UBL
+await fetch("https://app.recommand.eu/api/v1/{companyId}/send", {
+  method: "POST",
+  // ...
+  body: JSON.stringify({
+    recipient: "0208:987654321",
+    documentType: "invoice",
+    document: invoice,
+  }),
+});
+```
+
+## Working with Raw UBL
+
+If you need to work with raw UBL XML:
+
+1. You can send pre-formed XML directly using the [send document endpoint](/reference/sending/send-document):
+
+```javascript
+await fetch("https://app.recommand.eu/api/v1/{companyId}/send", {
+  method: "POST",
+  // ...
+  body: JSON.stringify({
+    recipient: "0208:987654321",
+    documentType: "xml",
+    document: "<Invoice>...(UBL XML)...</Invoice>",
+    doctypeId:
+      "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
+  }),
+});
+```
+
+2. You can retrieve the UBL XML of sent and received documents using the [get document endpoint](/reference/documents/get-document):
+
+```javascript
+const response = await fetch(
+  "https://app.recommand.eu/api/v1/documents/{documentId}",
+  {
+    // ...
+  }
+);
+const data = await response.json();
+const ublXml = data.document.xml;
+```
+
+## Further Resources
+
+<Cards>
+  <Card
+    href="https://docs.peppol.eu/poacc/billing/3.0/"
+    title="Peppol BIS Billing 3.0"
+  >
+    Official BIS Billing 3.0 documentation.
+  </Card>
+  <Card
+    href="https://docs.oasis-open.org/ubl/os-UBL-2.1/UBL-2.1.html"
+    title="OASIS UBL Standard"
+  >
+    UBL 2.1 specification by OASIS.
+  </Card>
+  <Card href="/docs/sending-invoices" title="Sending Invoices Guide">
+    Practical guide to send invoices with JSON or XML.
+  </Card>
+  <Card href="/docs/sending-credit-notes" title="Sending Credit Notes Guide">
+    Learn to issue credit notes in Peppol.
+  </Card>
+  <Card href="/reference" title="Complete API Reference">
+    Explore all endpoints and models.
+  </Card>
+</Cards>

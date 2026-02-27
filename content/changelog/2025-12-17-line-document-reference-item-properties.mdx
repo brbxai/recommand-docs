@@ -1,0 +1,17 @@
+---
+title: Support for line document reference and additional item properties
+description: Added support for document references and additional item properties on invoice, credit note and self billing document lines.
+date: 2025-12-17
+---
+
+We've implemented support for document references and additional item properties on invoice, credit note and self billing document lines.
+
+### What's new
+
+- **Line document reference**: You can now include a document reference on each line item, which is commonly used to reference a related invoice.
+- **Additional item properties**: Lines now support optional additional item properties as name-value pairs, allowing you to include custom metadata or additional information about items.
+
+These fields are optional and will only be included in the UBL document when provided. Both features are supported for both parsing incoming documents and generating outgoing documents.
+
+More information about these new fields can be found in the [API reference](/reference/sending/send-document).
+

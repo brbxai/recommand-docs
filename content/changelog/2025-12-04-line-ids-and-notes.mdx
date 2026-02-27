@@ -1,0 +1,15 @@
+---
+title: Line IDs and notes in documents and previews
+description: Added support for explicit line IDs and notes, with proper UBL mapping and PDF rendering.
+date: 2025-12-04
+---
+
+We’ve made line identification and free-text notes clearer for invoices and credit notes.
+
+### What changed
+
+- **Explicit line IDs**: Lines now support an optional `id` that is parsed from and written to UBL; when missing, a sequential number is still generated.
+- **Line notes**: Each line can include a free-text `note`, which round-trips via `cbc:Note` and appears in the billing PDF as italic text under the description.
+- **Document-level note**: A top-level document `note` is also supported and rendered as a separate section above the seller/buyer details in the PDF.
+
+This makes it easier to match lines to external systems and to communicate extra context directly on specific lines or the whole document.

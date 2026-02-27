@@ -1,0 +1,47 @@
+{
+  "name": "recommand-docs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "generate:api": "bun run scripts/generate-openapi.mts",
+    "dev": "bun run generate:api && next dev --turbopack",
+    "build": "bun run generate:api && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "lint:links": "bun run scripts/lint-links.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.18.0",
+    "ajv-formats": "^3.0.1",
+    "feed": "^5.2.0",
+    "fumadocs-core": "^16.6.5",
+    "fumadocs-mdx": "^14.2.8",
+    "fumadocs-openapi": "^10.3.12",
+    "fumadocs-ui": "^16.6.5",
+    "lucide-react": "^0.575.0",
+    "next": "16.1.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "shiki": "^3.22.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "babel-plugin-react-compiler": "1.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "next-validate-link": "^1.6.4",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "ignoreScripts": [
+    "sharp",
+    "unrs-resolver"
+  ],
+  "trustedDependencies": [
+    "sharp",
+    "unrs-resolver"
+  ]
+}

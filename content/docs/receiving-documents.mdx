@@ -1,0 +1,319 @@
+---
+title: Receiving Documents
+description: Process incoming Peppol documents using webhooks or polling. Covers real-time webhook delivery, inbox polling, fetching document details, and marking documents as read.
+---
+
+This guide explains how to receive and process incoming Peppol documents using the [Recommand API](/reference/documents). It covers the two main approaches — webhooks (push) and inbox polling (pull) — and how to retrieve and process document details.
+
+## Overview
+
+When a business partner sends you a document through the Peppol network, Recommand automatically receives, validates, and stores it. To consume these documents in your system, you have two options:
+
+1. **Webhooks (recommended)** — receive real-time notifications as documents arrive
+2. **Polling the Inbox** — periodically check for new unread documents
+
+Both approaches follow the same processing flow:
+
+1. Detect a new incoming document
+2. Fetch the full document details
+3. Process the document in your system
+4. Mark the document as read
+
+## Prerequisites
+
+- A Recommand account with API access
+- Your API key and secret
+- At least one registered company with a [Peppol identifier](/docs/managing-companies) and [document types](/reference/company-document-types/create-company-document-type) configured
+
+## Option 1: Webhooks (Recommended)
+
+Webhooks push a notification to your server the moment a document arrives. This is the recommended approach because it gives you real-time delivery without unnecessary API calls.
+
+For a detailed guide on setting up webhook endpoints, registering webhooks, and managing them, see the [Working with Webhooks](/docs/working-with-webhooks) guide. This section focuses on the document processing flow.
+
+### How It Works
+
+When a document is received, Recommand sends a POST request to your registered webhook URL:
+
+```json
+{
+  "eventType": "document.received",
+  "documentId": "doc_xxx",
+  "teamId": "team_xxx",
+  "companyId": "c_xxx"
+}
+```
+
+Your handler should:
+
+1. Acknowledge the webhook immediately (respond with `200 OK`)
+2. Fetch the full document using the `documentId`
+3. Process the document in your system
+4. Mark the document as read
+
+### Example: Webhook Handler
+
+```javascript
+app.post("/peppol-webhook", async (req, res) => {
+  const event = req.body;
+
+  // Acknowledge immediately
+  res.status(200).send("OK");
+
+  if (event.eventType === "document.received") {
+    // Fetch, process, and mark as read
+    const document = await fetchDocument(event.documentId);
+    await processInYourSystem(document);
+    await markAsRead(event.documentId);
+  }
+});
+```
+
+### When to Use Webhooks
+
+- You need real-time processing of incoming documents
+- Your system can expose a publicly accessible HTTPS endpoint
+- You want to minimize API calls
+
+## Option 2: Polling the Inbox
+
+If you cannot expose a public endpoint for webhooks, you can poll the inbox at regular intervals to check for new documents.
+
+### How It Works
+
+The [inbox endpoint](/reference/documents/get-inbox) returns all incoming documents that have not been marked as read. Once you process a document, mark it as read so it no longer appears in the inbox on the next poll.
+
+```javascript
+async function pollInbox() {
+  const response = await fetch("https://app.recommand.eu/api/v1/inbox", {
+    headers: {
+      Authorization:
+        "Basic " +
+        Buffer.from("your_api_key:your_api_secret").toString("base64"),
+    },
+  });
+
+  const result = await response.json();
+  return result.documents; // Array of unread incoming documents
+}
+```
+
+You can optionally filter by company:
+
+```javascript
+const response = await fetch(
+  "https://app.recommand.eu/api/v1/inbox?companyId=c_xxx",
+  {
+    headers: {
+      Authorization:
+        "Basic " +
+        Buffer.from("your_api_key:your_api_secret").toString("base64"),
+    },
+  }
+);
+```
+
+### Example: Polling Loop
+
+```javascript
+const POLL_INTERVAL = 60_000; // 1 minute
+
+async function startPolling() {
+  while (true) {
+    const documents = await pollInbox();
+
+    for (const doc of documents) {
+      const fullDocument = await fetchDocument(doc.id);
+      await processInYourSystem(fullDocument);
+      await markAsRead(doc.id);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
+  }
+}
+
+startPolling();
+```
+
+### When to Use Polling
+
+- Your system cannot expose a public webhook endpoint
+- You prefer a simpler architecture without inbound HTTP handling
+- Near-real-time processing is not required
+
+### Recommended Polling Intervals
+
+| Use Case | Interval | Notes |
+| --- | --- | --- |
+| Near-real-time | 1 minute | Higher API usage |
+| Standard processing | 5 minutes | Good balance for most integrations |
+| Batch processing | 15–60 minutes | For systems that process documents in bulk |
+
+## Fetching Document Details
+
+Both approaches require fetching the full document to access its content. The inbox and webhook payloads provide a document ID but not the full parsed document.
+
+Use the [get document endpoint](/reference/documents/get-document) to retrieve the complete document:
+
+```javascript
+async function fetchDocument(documentId) {
+  const response = await fetch(
+    `https://app.recommand.eu/api/v1/documents/${documentId}`,
+    {
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from("your_api_key:your_api_secret").toString("base64"),
+      },
+    }
+  );
+
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error(`Failed to fetch document: ${JSON.stringify(result.errors)}`);
+  }
+
+  return result.document;
+}
+```
+
+### Document Response Structure
+
+The document object contains the following key fields:
+
+| Field | Description | Example |
+| --- | --- | --- |
+| `id` | Unique document ID | `"doc_xxx"` |
+| `companyId` | The company that received the document | `"c_xxx"` |
+| `direction` | Always `"incoming"` for received documents | `"incoming"` |
+| `type` | Document type: `invoice`, `creditNote`, `selfBillingInvoice`, `selfBillingCreditNote`, `messageLevelResponse`, or `unknown` | `"invoice"` |
+| `senderId` | Peppol address of the sender | `"0208:0123456789"` |
+| `receiverId` | Peppol address of the receiver (your company) | `"0208:9876543210"` |
+| `parsed` | The structured document content (invoice, credit note, etc.) | See below |
+| `xml` | The raw UBL XML | `"<?xml ..."` |
+| `validation` | Validation results against EN16931 and Peppol BIS 3.0 | `{ "valid": true }` |
+| `labels` | Labels assigned to this document | `[{ "id": "lab_xxx", "name": "ERP" }]` |
+| `readAt` | Timestamp when marked as read, or `null` | `"2025-01-15T10:00:00Z"` |
+| `createdAt` | When the document was received | `"2025-01-15T09:30:00Z"` |
+| `peppolMessageId` | Peppol AS4 message ID | `"msg_xxx"` |
+| `peppolConversationId` | Peppol conversation ID | `"conv_xxx"` |
+| `envelopeId` | SBDH instance identifier | `"env_xxx"` |
+
+### Accessing the Parsed Content
+
+The `parsed` field contains the structured representation of the document. For an invoice, this includes all the fields you would find when [sending an invoice](/docs/sending-invoices) — parties, lines, amounts, VAT, payment information, and so on.
+
+```javascript
+const document = await fetchDocument("doc_xxx");
+
+if (document.type === "invoice") {
+  const invoice = document.parsed;
+  console.log("Invoice number:", invoice.invoiceNumber);
+  console.log("Issue date:", invoice.issueDate);
+  console.log("Seller:", invoice.seller.name);
+  console.log("Buyer:", invoice.buyer.name);
+
+  for (const line of invoice.lines) {
+    console.log(`- ${line.name}: ${line.netPriceAmount}`);
+  }
+}
+
+if (document.type === "creditNote") {
+  const creditNote = document.parsed;
+  console.log("Credit note number:", creditNote.creditNoteNumber);
+}
+```
+
+### Retrieving the Raw XML
+
+If you need the raw UBL XML for archival or processing in another system, it is included in the `xml` field of the document response. You can also request just the XML by setting the `Accept` header:
+
+```javascript
+const response = await fetch(
+  `https://app.recommand.eu/api/v1/documents/${documentId}`,
+  {
+    headers: {
+      Authorization:
+        "Basic " +
+        Buffer.from("your_api_key:your_api_secret").toString("base64"),
+      Accept: "application/xml",
+    },
+  }
+);
+
+const xml = await response.text(); // Raw UBL XML
+```
+
+## Marking Documents as Read
+
+After processing a document, mark it as read using the [mark as read endpoint](/reference/documents/mark-as-read). This removes it from the inbox and signals that your system has consumed it.
+
+```javascript
+async function markAsRead(documentId) {
+  const response = await fetch(
+    `https://app.recommand.eu/api/v1/documents/${documentId}/mark-as-read`,
+    {
+      method: "POST",
+      headers: {
+        Authorization:
+          "Basic " +
+          Buffer.from("your_api_key:your_api_secret").toString("base64"),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ read: true }),
+    }
+  );
+
+  return response.json();
+}
+```
+
+You can also mark a document as unread again by passing `{ "read": false }`.
+
+## Listing Past Documents
+
+To query documents beyond the inbox (including already-read documents), use the [list documents endpoint](/reference/documents/get-documents) with a direction filter:
+
+```javascript
+const response = await fetch(
+  "https://app.recommand.eu/api/v1/documents?direction=incoming&limit=25&page=1",
+  {
+    headers: {
+      Authorization:
+        "Basic " +
+        Buffer.from("your_api_key:your_api_secret").toString("base64"),
+    },
+  }
+);
+
+const result = await response.json();
+console.log(`Total incoming documents: ${result.pagination.total}`);
+```
+
+You can further filter by `companyId`, `type`, date range (`from`, `to`), `search`, and `isUnread`.
+
+## Best Practices
+
+1. **Use webhooks when possible**: They provide real-time delivery and reduce unnecessary API calls compared to polling.
+2. **Always mark documents as read**: This keeps your inbox clean and prevents duplicate processing on the next poll or webhook retry.
+3. **Process documents idempotently**: Your system should handle receiving the same document ID more than once gracefully, whether through webhook retries or overlapping polls.
+4. **Store the document ID**: Save the Recommand `id` in your system to track which documents have been processed and to avoid duplicates.
+5. **Handle different document types**: Incoming documents can be invoices, credit notes, self-billing invoices, or other Peppol document types. Check the `type` field before processing.
+6. **Use labels for routing**: Combine with [Suppliers and Labels](/docs/suppliers-and-labels) to automatically route documents to the right system or workflow based on the sender.
+
+## Next Steps
+
+<Cards>
+  <Card href="/docs/email-delivery-and-notifications" title="Email Delivery and Notifications">
+    Forward incoming documents to email or accounting software automatically.
+  </Card>
+  <Card href="/docs/working-with-webhooks" title="Working with Webhooks">
+    Set up webhook endpoints and manage webhook registrations.
+  </Card>
+  <Card href="/docs/suppliers-and-labels" title="Suppliers and Labels">
+    Route incoming documents automatically based on supplier labels.
+  </Card>
+  <Card href="/reference/documents" title="Documents API Reference">
+    Explore all document endpoints including inbox, get, list, and mark as read.
+  </Card>
+</Cards>

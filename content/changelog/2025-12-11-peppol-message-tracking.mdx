@@ -1,0 +1,16 @@
+---
+title: Peppol message tracking information for outgoing documents
+description: Added Peppol message ID, conversation ID, and received signal message tracking to sent documents.
+date: 2025-12-11
+---
+
+We've added detailed Peppol message tracking information to help you monitor document transmission and troubleshoot delivery issues.
+
+### What changed
+
+- **Message tracking fields**: Sent documents now include `peppolMessageId`, `peppolConversationId`, and `receivedPeppolSignalMessage` fields that capture metadata from the Peppol AS4 network response.
+- **API response updates**: The transmitted document API response schema now includes these tracking fields, making them available for programmatic access.
+- **Enhanced UI display**: The document detail page now shows an "Advanced" collapsible section with Peppol tracking information, including the ability to download or copy the received Peppol signal message XML.
+
+This provides better visibility into the Peppol network's handling of your documents and helps with debugging delivery problems.
+

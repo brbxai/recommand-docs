@@ -1,0 +1,154 @@
+---
+title: Peppol Network Basics
+description: Learn the fundamentals of the Peppol network — how it works, its four-corner model, participant IDs, access points, and the role of service providers.
+---
+
+This guide introduces the fundamental concepts of the Peppol network and its role in electronic document exchange.
+
+## What is Peppol?
+
+Peppol (Pan-European Public Procurement Online) is a standardized network that enables organizations to exchange electronic business documents across borders. Originally developed for European public procurement, it has expanded globally to facilitate e-invoicing and other business document exchanges between organizations of all types.
+
+Key characteristics of Peppol:
+
+- **Open network**: Any organization can join through an accredited service provider
+- **Standardized**: Common document formats and transmission protocols
+- **Interoperable**: Connect once, reach all network participants
+- **Secure**: Trusted and authenticated document delivery
+- **Global**: Used across Europe, Asia, and beyond
+
+## Peppol Network Structure
+
+Peppol operates as a "4-corner model" for document transmission:
+
+**Peppol 4-corner model**
+
+- **Corner 1**: Sender
+- **Corner 2**: Sender's Access Point
+- **Corner 3**: Recipient's Access Point
+- **Corner 4**: Recipient
+
+This structure allows any participant to exchange documents with any other participant through their respective service providers without bilateral agreements.
+
+## Key Components
+
+### 1. Peppol IDs
+
+Every participant in the Peppol network is identified by a unique Peppol ID, typically structured as:
+
+```
+[Identifier Scheme]:[Identifier Value]
+```
+
+Common electronic address schemes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/eas/).
+In Belgium, "0208" (Belgian Enterprise Number) is often used.
+
+The identifier is often the company's national identifier, such as a VAT number or enterprise number.
+
+### 2. Access Points
+
+Access Points are service providers (like Recommand) that connect organizations to the Peppol network. They handle:
+
+- Document validation
+- Protocol conversion
+- Secure transmission
+- Digital signatures
+
+### 3. SML and SMP
+
+- **SML (Service Metadata Locator)**: Central directory that helps locate the right SMP server
+- **SMP (Service Metadata Publisher)**: Contains information about recipients' capabilities and how to route documents to them
+
+Aside from being an access point service provider, Recommand also acts as an SMP.
+
+## Document Exchange Process
+
+1. **Addressing**: Documents are addressed using the recipient's Peppol ID
+2. **Discovery**:
+   - The sender's Access Point queries the SML to find the recipient's SMP
+   - The SMP provides details about what document types the recipient can receive
+3. **Validation**: Documents are validated against Peppol standards
+4. **Transmission**: Documents are securely transmitted between Access Points
+5. **Delivery**: The recipient's Access Point delivers the document to the recipient
+
+## Benefits of Using Peppol
+
+- **Reduced costs**: Eliminate paper-based processes
+- **Faster processing**: Near real-time document delivery
+- **Increased accuracy**: Standardized formats reduce errors
+- **Regulatory compliance**: Meet legal requirements for e-invoicing
+- **Simplified supplier onboarding**: One connection to reach many trading partners
+- **International reach**: Seamlessly exchange documents across borders
+
+## Peppol in Practice
+
+### Verification
+
+Before sending a document, you can verify if the recipient is registered in the Peppol network using the [verify endpoint](/reference/recipients/verify-recipient):
+
+```javascript
+// Check if recipient exists in Peppol network
+const response = await fetch("https://app.recommand.eu/api/v1/verify", {
+  method: "POST",
+  headers: {
+    Authorization:
+      "Basic " + Buffer.from("key_xxx:secret_xxx").toString("base64"),
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    peppolAddress: "0208:987654321",
+  }),
+});
+```
+
+### Document Types Support
+
+You can also check if a recipient supports specific document types using the [verify document support endpoint](/reference/recipients/verify-document-support):
+
+```javascript
+// Check document type support
+const response = await fetch(
+  "https://app.recommand.eu/api/v1/verify-document-support",
+  {
+    method: "POST",
+    headers: {
+      Authorization:
+        "Basic " + Buffer.from("key_xxx:secret_xxx").toString("base64"),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      peppolAddress: "0208:987654321",
+      documentType:
+        "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
+    }),
+  }
+);
+```
+
+## Joining Peppol with Recommand
+
+Recommand provides a fully managed Peppol Access Point and SMP service:
+
+1. **Register your company** in the Recommand platform
+2. **Configure your Peppol ID** (typically your enterprise number) by [creating a company](/docs/managing-companies)
+3. **Start sending and receiving** Peppol documents instantly
+
+## Next Steps
+
+<Cards>
+  <Card
+    href="/docs/peppol-standards-and-compliance"
+    title="Peppol Standards and Compliance"
+  >
+    Learn about standards, identifiers, and validation rules.
+  </Card>
+  <Card href="/docs/sending-invoices" title="Sending Your First Invoice">
+    Follow the step-by-step guide to send an invoice.
+  </Card>
+  <Card href="/docs/verifying-recipients" title="Verifying Recipients">
+    Check recipients exist and support the right document types.
+  </Card>
+  <Card href="/docs/managing-companies" title="Managing Companies">
+    Create and manage your company profiles.
+  </Card>
+</Cards>

@@ -1,0 +1,169 @@
+---
+title: Peppol Standards and Compliance
+description: Overview of Peppol BIS specifications, EN16931 compliance, country-specific e-invoicing mandates, and the standards behind Peppol document exchange.
+---
+
+This guide covers the key standards and compliance requirements for [Peppol document exchange](/reference).
+
+## Peppol BIS (Business Interoperability Specifications)
+
+Peppol BIS defines the business rules and document formats for different types of electronic documents. These specifications ensure interoperability between trading partners.
+
+### Key BIS Specifications
+
+| BIS Specification       | Description                      | Document Types                        |
+| ----------------------- | -------------------------------- | ------------------------------------- |
+| BIS Billing 3.0         | Invoice and credit note exchange | Invoice, Credit Note                  |
+| BIS Ordering 3.3        | Purchase order process           | Order, Order Response                 |
+| BIS Catalogue 3.1       | Product catalogue exchange       | Catalogue, Catalogue Response         |
+| BIS Despatch Advice 3.1 | Shipping information             | Despatch Advice                       |
+| BIS Order Agreement 3.0 | Standing agreements              | Order Agreement                       |
+| BIS Punch Out 3.1       | Catalogue request and response   | Catalogue Request, Catalogue Response |
+
+### BIS Billing 3.0
+
+The most commonly used specification is BIS Billing 3.0, which supports:
+
+- **EN16931-compliant invoices**: Conforming to the European Standard for e-invoicing
+- **Credit notes**: For refunds and corrections
+- **Self-billing**: Where the customer creates the invoice on behalf of the supplier
+
+## Document Formats and Identifiers
+
+### Document Type Identifiers
+
+Document type identifiers in Peppol follow this pattern:
+
+```text
+root namespace::document element name##customization ID::version ID
+```
+
+For example, the standard invoice identifier:
+
+```text
+urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1
+```
+
+### Process Identifiers
+
+Process identifiers specify the business process context:
+
+```text
+urn:fdc:peppol.eu:2017:poacc:billing:01:1.0
+```
+
+Where:
+
+- poacc indicates Post-Award processes
+- billing is the process group
+- 01 is the specific process (e.g., billing)
+- 1.0 is the version
+
+## Validation Rules
+
+Peppol documents must pass multiple validation levels:
+
+1. **Syntax Validation**
+   Basic XML schema validation ensuring the document structure is correct.
+
+2. **Semantic Validation (Schematron)**
+   Business rules validation using Schematron, checking that:
+
+- Mandatory fields are present
+- Field values are in valid formats
+- Business logic is consistent
+
+3. **Peppol Rules**
+   Additional Peppol-specific rules, such as:
+
+- Valid Peppol identifiers
+- Required party information
+- Allowable code values
+
+## Regional Compliance Requirements
+
+Many countries have specific e-invoicing requirements that Peppol implementations must satisfy:
+
+### European Union
+
+- **Directive 2014/55/EU**: Mandates that all public sector entities must be able to receive and process e-invoices
+- **EN16931**: European standard for e-invoicing core elements
+
+## Compliance in the Recommand API
+
+The Recommand Peppol API handles many compliance details automatically:
+
+### Document Validation
+
+When sending a document through Recommand using the [send document endpoint](/reference/sending/send-document):
+
+```javascript
+await fetch("https://app.recommand.eu/api/v1/{companyId}/send", {
+  method: "POST",
+  headers: {
+    /* authentication headers */
+  },
+  body: JSON.stringify({
+    recipient: "0208:987654321",
+    documentType: "invoice",
+    document: invoiceData,
+  }),
+});
+```
+
+The API automatically:
+
+1. Validates the document against the appropriate BIS specification
+2. Converts your JSON payload to compliant UBL XML
+3. Adds required Peppol headers and identifiers
+4. Applies digital signatures as required
+
+### Support for Multiple Document Types
+
+The API supports sending both high-level JSON documents and raw XML:
+
+```javascript
+// Using JSON (automatically converted to UBL)
+{
+  "recipient": "0208:987654321",
+  "documentType": "invoice",
+  "document": { /* invoice JSON */ }
+}
+
+// Using raw UBL
+{
+  "recipient": "0208:987654321",
+  "documentType": "xml",
+  "document": "<Invoice>...</Invoice>",
+  "doctypeId": "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1"
+}
+```
+
+## Testing and certification
+
+Before going live with Peppol:
+
+1. **Test documents** against Peppol validation rules
+2. **Verify recipient readiness** using the [verification endpoints](/reference/recipients)
+3. **Send test documents** to known recipients in a controlled manner
+
+## Common Compliance Challenges
+
+1. **Missing mandatory fields**: Ensure all required fields are provided
+2. **Incorrect party information**: Verify all party identifiers are correct
+3. **Invalid code values**: Use only approved codes for units, countries, currencies, etc.
+4. **Country-specific rules**: Be aware of additional national requirements
+
+## Next Steps
+
+<Cards>
+  <Card href="/docs/sending-invoices" title="Sending Your First Invoice">
+    Follow the step-by-step guide to send an invoice.
+  </Card>
+  <Card href="/docs/managing-companies" title="Managing Companies">
+    Set up your company to start sending.
+  </Card>
+  <Card href="/docs/verifying-recipients" title="Verifying Recipients">
+    Validate recipients before sending documents.
+  </Card>
+</Cards>

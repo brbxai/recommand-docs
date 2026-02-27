@@ -1,0 +1,32 @@
+---
+title: Send documents without Peppol recipient
+description: You can now send invoices and credit notes via email to customers who aren't on the Peppol network, using the same API endpoint.
+date: 2026-01-14
+---
+
+You can now send billing documents (invoices and credit notes) **without a Peppol recipient**, enabling you to use a single API endpoint for all your customers - whether they're on Peppol or not.
+
+### What changed
+
+- **Null recipient support**: Set `recipient: null` when sending invoices, credit notes, self-billing invoices, or self-billing credit notes
+- **Email-only delivery**: When recipient is null, documents are sent via email only
+- **PDF generation**: PDFs are still generated and attached to emails, even without a Peppol recipient
+- **Unified API**: Use the same send document endpoint for both Peppol and non-Peppol customers
+
+### Why this matters
+
+This feature is especially valuable in **e-commerce and B2C scenarios** where many customers aren't on the Peppol network:
+
+- **Unified invoicing workflow**: Send all invoices through the same API endpoint, regardless of whether recipients are on Peppol
+- **E-commerce integration**: Perfect for online stores that need to invoice both B2B (Peppol) and B2C (email) customers
+- **International customers**: Send invoices to customers outside countries with Peppol mandates
+- **Simplified integration**: No need to maintain separate systems or endpoints for Peppol vs. non-Peppol recipients
+- **Consistent document format**: All invoices use the same structure and PDF generation
+
+### What you need to do
+
+- **Set recipient to null**: When sending to non-Peppol customers, set `recipient: null` in your send document request
+- **Enable email delivery**: Ensure the `email` field is provided with recipient email addresses
+- **Use billing document types**: Only invoices, credit notes, self-billing invoices, and self-billing credit notes support null recipients
+
+This update makes it easier to handle mixed customer bases and simplifies integration for e-commerce and marketplace scenarios.

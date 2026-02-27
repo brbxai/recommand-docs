@@ -1,0 +1,11 @@
+{
+  "title": "Integrations",
+  "defaultOpen": true,
+  "pages": [
+    "harvest",
+    "erpnext",
+    "exact-online",
+    "yuki",
+    "clearfacts"
+  ]
+}

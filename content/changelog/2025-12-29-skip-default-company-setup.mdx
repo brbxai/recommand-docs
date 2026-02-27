@@ -1,0 +1,18 @@
+---
+title: Skip default company setup during creation
+description: Added skipDefaultCompanySetup option to company creation API to allow manual control over company identifier and document type setup.
+date: 2025-12-29
+---
+
+You can now skip the automatic setup of company defaults when creating a new company, giving you more control over the company configuration process.
+
+### What's new
+
+- **skipDefaultCompanySetup option**: When creating a company via the API, you can now set `skipDefaultCompanySetup` to `true` to skip the automatic creation of company identifiers and document types.
+- **Manual setup control**: This allows you to create company identifiers and document types manually using the respective API endpoints, giving you more granular control over the company configuration.
+- **Default behavior unchanged**: By default, `skipDefaultCompanySetup` is `false`, so existing behavior is preserved and companies will continue to have their defaults set up automatically unless explicitly skipped.
+
+This is particularly useful when you need to customize the company setup process or when integrating with systems that prefer to manage company configuration separately.
+
+More information about creating companies can be found in the [API reference](/reference/companies/create-company).
+

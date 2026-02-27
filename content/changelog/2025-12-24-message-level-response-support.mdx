@@ -1,0 +1,22 @@
+---
+title: Native Message Level Response support
+description: Added native support for sending and receiving Message Level Response documents via JSON.
+date: 2025-12-24
+---
+
+We've implemented JSON support for Message Level Response (MLR) documents, allowing you to easily send and receive acknowledgment responses for Peppol documents.
+
+### What's new
+
+- **Send Message Level Response**: You can now send Message Level Response documents via the API to acknowledge receipt of invoices and other documents. Response codes include:
+  - **AB**: Message acknowledgement
+  - **AP**: Accepted
+  - **RE**: Rejected
+- **Receive Message Level Response**: The system now automatically parses and stores incoming Message Level Response documents.
+- **Document linking**: Message Level Response documents are linked to their original documents via the `envelopeId` field, and the dashboard shows related documents when viewing a Message Level Response.
+- **Rendering support**: Message Level Response documents can be rendered as HTML or PDF previews, just like other native document types.
+
+Message Level Response documents allow recipients to formally acknowledge receipt and acceptance or rejection of invoices and other documents, providing better visibility into document status in the Peppol network.
+
+More information about sending Message Level Response documents can be found in the [API reference](/reference/sending/send-document).
+

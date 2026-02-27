@@ -1,0 +1,15 @@
+---
+title: More payment means options
+description: Added support for multiple Peppol payment means beyond credit transfer.
+date: 2025-12-02
+---
+
+We’ve expanded payment method handling for invoices and credit notes.
+
+### What changed
+
+- **More payment means**: Documents can now use additional Peppol payment means such as cash, debit transfer, bank card and credit/debit card, not just credit transfer.
+- **Schema and XML mapping**: The payment means schema and UBL parsing/serialization map between friendly keys (like `credit_card`) and the correct Peppol payment codes.
+- **Financial institution branch**: Payment details now support an optional financial institution branch identifier (for example BIC or national clearing code) which is round‑tripped in the XML.
+
+This makes it easier to represent how an invoice or credit note will actually be paid, while staying aligned with Peppol payment means and banking details.
